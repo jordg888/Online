@@ -23,36 +23,83 @@
             container.append(button);
 
             button.on('hover:enter click', function() {
-                var items = [
-                    {
-                        title: 'Балансер: Ashdi (UA)',
-                        source: 'https://ashdi.vip/api/video?title='
-                    },
-                    {
-                        title: 'Балансер: VideoCDN',
-                        source: 'https://videocdn.tv/api/short?api_token=3i40v5i7z6CcU4SHe627S74y704mIu62&title='
-                    },
-                    {
-                        title: 'Балансер: Резерв',
-                        source: 'https://videocdn.tv/api/movies?api_token=3i40v5i7z6CcU4SHe627S74y704mIu62&title='
-                    }
-                ];
+                var movie = data.movie;
+                var title = movie.title || movie.name;
 
-                Lampa.Select.show({
-                    title: 'Оберіть джерело',
-                    items: items,
-                    onSelect: function(item) {
-                        var search_url = item.source + encodeURIComponent(data.movie.title || data.movie.name);
-                        Lampa.Activity.push({
-                            title: 'Козак ТВ: ' + (data.movie.title || data.movie.name),
-                            component: 'online',
-                            movie: data.movie,
-                            url: api_proxy + encodeURIComponent(search_url)
+                // Створюємо компонент з табами зверху
+                Lampa.Component.add('kozak_mod', function(object) {
+                    var network = new Lampa.Reguest();
+                    var scroll = new Lampa.Scroll({mask: true, over: true});
+                    var files = new Lampa.Explorer(object);
+                    var results = [];
+                    
+                    this.create = function() {
+                        var _this = this;
+                        // Вибір балансерів зверху
+                        var filter = new Lampa.Filter(object);
+                        filter.render().find('.filter__sort').remove(); // Прибираємо сортування
+                        
+                        filter.onSelect = function(item) {
+                            _this.search(item.source);
+                        };
+
+                        filter.set('source', [
+                            {title: 'Ashdi (UA)', source: 'ashdi', selected: true},
+                            {title: 'VideoCDN', source: 'vcdn'},
+                            {title: 'Резерв', source: 'rezerv'}
+                        ]);
+
+                        this.search('ashdi'); // Стартуємо з Ashdi
+                        
+                        scroll.append(filter.render());
+                        scroll.append(files.render());
+                        return scroll.render();
+                    };
+
+                    this.search = function(source_type) {
+                        files.clear();
+                        Lampa.Select.show({title: 'Шукаємо...'});
+                        
+                        var base_url = '';
+                        if(source_type === 'ashdi') base_url = 'https://ashdi.vip/api/video?title=';
+                        else if(source_type === 'vcdn') base_url = 'https://videocdn.tv/api/short?api_token=3i40v5i7z6CcU4SHe627S74y704mIu62&title=';
+                        else base_url = 'https://videocdn.tv/api/movies?api_token=3i40v5i7z6CcU4SHe627S74y704mIu62&title=';
+
+                        var final_url = api_proxy + encodeURIComponent(base_url + encodeURIComponent(title));
+
+                        network.silent(final_url, function(json) {
+                            Lampa.Select.close();
+                            var items = json.data || (Array.isArray(json) ? json : []);
+                            
+                            if (items.length > 0) {
+                                items.forEach(function(item) {
+                                    var card = Lampa.Template.get('button', {title: item.title || item.name || 'Відео'});
+                                    card.on('hover:enter', function() {
+                                        var v_url = item.iframe_src || item.url;
+                                        if (v_url) {
+                                            if (!v_url.startsWith('http')) v_url = 'https:' + v_url;
+                                            Lampa.Player.play({ url: v_url, title: item.title || title });
+                                        }
+                                    });
+                                    files.append(card);
+                                });
+                            } else {
+                                Lampa.Noty.show('Нічого не знайдено на цьому джерелі');
+                            }
+                        }, function() {
+                            Lampa.Select.close();
+                            Lampa.Noty.show('Помилка сервера');
                         });
-                    },
-                    onBack: function() {
-                        Lampa.Controller.toggle('full_start');
-                    }
+                    };
+
+                    this.render = function() { return this.create(); };
+                });
+
+                Lampa.Activity.push({
+                    title: 'Козак ТВ',
+                    component: 'kozak_mod',
+                    movie: movie,
+                    page: 1
                 });
             });
         };
