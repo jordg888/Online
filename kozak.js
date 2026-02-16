@@ -2,7 +2,6 @@
     'use strict';
 
     function KozakTiv() {
-        var ICON_KOZAK = 'https://raw.githubusercontent.com/jordg888/Online/main/kozak.svg'; 
         var api_proxy = 'https://vercel-proxy-blue-six.vercel.app/api?url=';
 
         this.init = function () {
@@ -11,11 +10,10 @@
                 if (e.type === 'complite') {
                     _this.cleanup();
                     setTimeout(function() {
-                        try { _this.render(e.data, e.object.activity.render()); } catch (err) {}
+                        _this.render(e.data, e.object.activity.render());
                     }, 200);
                 }
             });
-            Lampa.Component.add('kozak_search', _this.component);
         };
 
         this.cleanup = function() {
@@ -23,7 +21,6 @@
         };
 
         this.render = function (data, html) {
-            var _this = this;
             var container = $(html);
             if (container.find('.lampa-kozak-button').length) return;
 
@@ -39,74 +36,31 @@
             else buttons_container.append(button);
 
             button.on('hover:enter click', function() {
+                var movie = data.movie;
+                var title = movie.title || movie.name;
+                
+                // Викликаємо стандартний компонент ONLINE
+                Lampa.Component.add('kozak_online', function(object) {
+                    var comp = new Lampa.Online(object);
+                    var old_create = comp.create;
+
+                    comp.create = function() {
+                        // Підміняємо запит на наш проксі
+                        var search_url = 'https://videocdn.tv/api/short?api_token=3i40v5i7z6CcU4SHe627S74y704mIu62&title=' + encodeURIComponent(title);
+                        object.url = api_proxy + encodeURIComponent(search_url);
+                        return old_create.apply(this, arguments);
+                    };
+                    return comp;
+                });
+
                 Lampa.Activity.push({
                     title: 'Козак ТВ',
-                    component: 'kozak_search',
-                    movie: data.movie
+                    component: 'online', // Використовуємо системний компонент
+                    movie: movie,
+                    url: '' // Буде підставлено вище
                 });
             });
         };
-
-        this.component = function(object) {
-            var scroll = new Lampa.Scroll({mask: true, over: true});
-            var files = new Lampa.Explorer(object);
-            
-            this.create = function() {
-                var _this = this;
-                var title = object.movie.title || object.movie.name;
-                var search_url = 'https://videocdn.tv/api/short?api_token=3i40v5i7z6CcU4SHe627S74y704mIu62&title=' + encodeURIComponent(title);
-                var final_url = api_proxy + encodeURIComponent(search_url);
-
-                Lampa.Select.show({title: 'Пошук на Козак ТВ...'});
-
-                // ВИКОРИСТОВУЄМО ПРЯМИЙ AJAX ДЛЯ ПОВНОГО КОНТРОЛЮ
-                $.ajax({
-                    url: final_url,
-                    method: 'GET',
-                    dataType: 'text', // Отримуємо як текст, щоб не "впасти" при помилці JSON
-                    timeout: 10000,
-                    success: function(response) {
-                        Lampa.Select.close();
-                        try {
-                            var json = JSON.parse(response);
-                            var items = json.data || (Array.isArray(json) ? json : []);
-                            
-                            if (items.length > 0) {
-                                items.forEach(function(item) {
-                                    var card = Lampa.Template.get('button', {title: item.title || item.name || 'Дивитися'});
-                                    card.on('hover:enter click', function() {
-                                        var v_url = item.iframe_src || item.url;
-                                        if (v_url) {
-                                            if (!v_url.startsWith('http')) v_url = 'https:' + v_url;
-                                            Lampa.Player.play({ url: v_url, title: item.title || title });
-                                        }
-                                    });
-                                    files.append(card);
-                                });
-                            } else {
-                                Lampa.Noty.show('Нічого не знайдено');
-                                files.append(Lampa.Template.get('empty'));
-                            }
-                        } catch (e) {
-                            console.log('Kozak: JSON parse error', response);
-                            Lampa.Noty.show('Помилка даних від сервера');
-                            files.append(Lampa.Template.get('empty'));
-                        }
-                        scroll.append(files.render());
-                    },
-                    error: function() {
-                        Lampa.Select.close();
-                        Lampa.Noty.show('Помилка зв\'язку з Vercel');
-                        files.append(Lampa.Template.get('empty'));
-                        scroll.append(files.render());
-                    }
-                });
-
-                return scroll.render();
-            };
-
-            this.render = function() { return this.create(); };
-        }
     }
 
     if (window.Lampa) new KozakTiv().init();
