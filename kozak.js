@@ -2,6 +2,7 @@
     'use strict';
 
     function KozakTiv() {
+        // Використовуємо твій проксі
         var api_proxy = 'https://vercel-proxy-blue-six.vercel.app/api?url=';
 
         this.init = function () {
@@ -21,6 +22,7 @@
         };
 
         this.render = function (data, html) {
+            var _this = this;
             var container = $(html);
             if (container.find('.lampa-kozak-button').length) return;
 
@@ -39,25 +41,16 @@
                 var movie = data.movie;
                 var title = movie.title || movie.name;
                 
-                // Викликаємо стандартний компонент ONLINE
-                Lampa.Component.add('kozak_online', function(object) {
-                    var comp = new Lampa.Online(object);
-                    var old_create = comp.create;
-
-                    comp.create = function() {
-                        // Підміняємо запит на наш проксі
-                        var search_url = 'https://videocdn.tv/api/short?api_token=3i40v5i7z6CcU4SHe627S74y704mIu62&title=' + encodeURIComponent(title);
-                        object.url = api_proxy + encodeURIComponent(search_url);
-                        return old_create.apply(this, arguments);
-                    };
-                    return comp;
-                });
+                // Формуємо пряме посилання на пошук через проксі
+                // Спробуємо інший токен або публічний запит
+                var search_url = 'https://videocdn.tv/api/short?api_token=3i40v5i7z6CcU4SHe627S74y704mIu62&title=' + encodeURIComponent(title);
+                var final_url = api_proxy + encodeURIComponent(search_url);
 
                 Lampa.Activity.push({
-                    title: 'Козак ТВ',
-                    component: 'online', // Використовуємо системний компонент
+                    title: 'Козак ТВ: ' + title,
+                    component: 'online',
                     movie: movie,
-                    url: '' // Буде підставлено вище
+                    url: final_url
                 });
             });
         };
