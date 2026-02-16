@@ -1,6 +1,7 @@
 (function () {
     'use strict';
     function KozakTiv() {
+        // Твій проксі на Vercel
         var api_proxy = 'https://vercel-proxy-blue-six.vercel.app/api?url=';
         
         this.init = function () {
@@ -22,15 +23,15 @@
             var container = $(html).find('.full-start-new__buttons, .full-start__buttons');
             if (container.find('.lampa-kozak-button').length) return;
             
-            var neighbors = container.find('.selector');
-            if (neighbors.length >= 2) button.insertAfter(neighbors.eq(1));
-            else container.append(button);
+            container.append(button);
 
             button.on('hover:enter click', function() {
                 var movie = data.movie;
                 var title = movie.title || movie.name;
-                // Спроба через основне джерело (VideoCDN)
-                var search_url = 'https://videocdn.tv/api/short?api_token=3i40v5i7z6CcU4SHe627S74y704mIu62&title=' + encodeURIComponent(title);
+                
+                // ЗМІНЕНО: тепер шукаємо через балансер Ashdi (через проксі)
+                // Ми використовуємо пошук за назвою
+                var search_url = 'https://ashdi.vip/api/video?title=' + encodeURIComponent(title);
                 
                 Lampa.Activity.push({
                     title: 'Козак ТВ: ' + title,
