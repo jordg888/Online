@@ -2,8 +2,8 @@
     'use strict';
 
     function KozakTiv() {
-        var ICON_KOZAK = 'https://yarikrazor-star.github.io/lmp/wiki.svg'; 
-        var api_proxy = 'https://vercel-proxy-blue-six.vercel.app/api?url=';
+        var ICON_KOZAK = 'https://raw.githubusercontent.com/jordg888/Online/main/kozak.svg'; // Можете замінити на свою
+        var api_proxy = 'https://vercel-proxy-blue-six.vercel.app/';
 
         this.init = function () {
             var _this = this;
@@ -13,13 +13,10 @@
                     setTimeout(function() {
                         try {
                             _this.render(e.data, e.object.activity.render());
-                        } catch (err) {
-                            console.log('Kozak: Render error', err);
-                        }
+                        } catch (err) {}
                     }, 200);
                 }
             });
-            
             Lampa.Component.add('kozak_search', _this.component);
         };
 
@@ -32,27 +29,22 @@
             var container = $(html);
             if (container.find('.lampa-kozak-button').length) return;
 
-            // ВИПРАВЛЕНО: Додано текст "Козак ТВ" і стиль, щоб його було видно
             var button = $('<div class="full-start__button selector lampa-kozak-button">' +
-                                '<img src="' + ICON_KOZAK + '" style="width: 1.6em; height: 1.6em; margin-right: 10px; object-fit: contain;">' +
+                                '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right: 10px;"><path d="M12 2L4.5 20.29L5.21 21L12 18L18.79 21L19.5 20.29L12 2Z" fill="white"/></svg>' +
                                 '<span>Козак ТВ</span>' +
                             '</div>');
 
             var buttons_container = container.find('.full-start-new__buttons, .full-start__buttons');
             var neighbors = buttons_container.find('.selector');
             
-            if (neighbors.length >= 2) {
-                button.insertAfter(neighbors.eq(1));
-            } else {
-                buttons_container.append(button);
-            }
+            if (neighbors.length >= 2) button.insertAfter(neighbors.eq(1));
+            else buttons_container.append(button);
 
             button.on('hover:enter click', function() {
                 Lampa.Activity.push({
                     title: 'Козак ТВ',
                     component: 'kozak_search',
-                    movie: data.movie,
-                    page: 1
+                    movie: data.movie
                 });
             });
         };
@@ -65,64 +57,45 @@
             this.create = function() {
                 var _this = this;
                 var title = object.movie.title || object.movie.name;
-                
-                // Використовуємо VideoCDN API для пошуку
                 var search_url = 'https://videocdn.tv/api/movies?api_token=3i40v5i7z6CcU4SHe627S74y704mIu62&title=' + encodeURIComponent(title);
-                var final_url = api_proxy + encodeURIComponent(search_url);
+                var final_url = api_proxy + '?url=' + encodeURIComponent(search_url);
 
-                Lampa.Select.show({title: 'Пошук на Козак ТВ...'});
+                Lampa.Select.show({title: 'Пошук...'});
 
                 network.silent(final_url, function(json) {
                     Lampa.Select.close();
-                    
-                    // ВИПРАВЛЕНО: Перевірка, чи прийшов масив, щоб не було помилки forEach
-                    if (json && json.data && Array.isArray(json.data) && json.data.length > 0) {
+                    // БЕЗПЕЧНА ПЕРЕВІРКА: тепер не "впаде"
+                    if (json && json.data && Array.isArray(json.data)) {
                         json.data.forEach(function(item) {
-                            var card = Lampa.Template.get('button', {
-                                title: item.title,
-                                description: item.year || ''
-                            });
-                            
+                            var card = Lampa.Template.get('button', {title: item.title});
                             card.on('hover:enter', function() {
-                                // Плеєр: відкриваємо iframe від VideoCDN
                                 if (item.iframe_src) {
                                     Lampa.Player.play({
                                         url: 'https:' + item.iframe_src,
                                         title: item.title
                                     });
-                                } else {
-                                    Lampa.Noty.show('Відео недоступне');
                                 }
                             });
                             files.append(card);
                         });
                     } else {
-                        // Якщо нічого не знайдено або помилка формату
-                        Lampa.Noty.show('Нічого не знайдено');
+                        Lampa.Noty.show('Нічого не знайдено або помилка сервера');
                         files.append(Lampa.Template.get('empty'));
                     }
-                    _this.loading(false);
+                    scroll.append(files.render());
                 }, function() {
                     Lampa.Select.close();
-                    Lampa.Noty.show('Помилка сервера Vercel');
+                    Lampa.Noty.show('Сервер 404: Перевірте папки на GitHub');
                     files.append(Lampa.Template.get('empty'));
-                    _this.loading(false);
+                    scroll.append(files.render());
                 });
 
                 return scroll.render();
             };
 
-            this.loading = function(status) {
-                // Пуста функція для сумісності
-            };
-
-            this.render = function() {
-                return this.create();
-            };
+            this.render = function() { return this.create(); };
         };
     }
 
-    if (window.Lampa) {
-        new KozakTiv().init();
-    }
+    if (window.Lampa) new KozakTiv().init();
 })();
