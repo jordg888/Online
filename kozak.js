@@ -3,6 +3,7 @@
 
     function KozakTiv() {
         var ICON_KOZAK = 'https://raw.githubusercontent.com/jordg888/Online/main/kozak.svg'; 
+        // Твоя робоча адреса проксі
         var api_proxy = 'https://vercel-proxy-blue-six.vercel.app/api?url=';
 
         this.init = function () {
@@ -55,7 +56,7 @@
             this.create = function() {
                 var _this = this;
                 var title = object.movie.title || object.movie.name;
-                // Використовуємо короткий метод API для швидкого пошуку
+                // Використовуємо VideoCDN API через твій проксі
                 var search_url = 'https://videocdn.tv/api/short?api_token=3i40v5i7z6CcU4SHe627S74y704mIu62&title=' + encodeURIComponent(title);
                 var final_url = api_proxy + encodeURIComponent(search_url);
 
@@ -64,12 +65,10 @@
                 network.silent(final_url, function(json) {
                     Lampa.Select.close();
                     
-                    // ФІКС: Глибока перевірка наявності масиву даних
+                    // БЕЗПЕЧНА ПЕРЕВІРКА ДАНИХ
                     var items = [];
-                    if (json) {
-                        if (Array.isArray(json.data)) items = json.data;
-                        else if (Array.isArray(json)) items = json;
-                    }
+                    if (json && json.data && Array.isArray(json.data)) items = json.data;
+                    else if (Array.isArray(json)) items = json;
 
                     if (items.length > 0) {
                         items.forEach(function(item) {
@@ -89,13 +88,13 @@
                             files.append(card);
                         });
                     } else {
-                        Lampa.Noty.show('Нічого не знайдено');
+                        Lampa.Noty.show('На жаль, нічого не знайдено');
                         files.append(Lampa.Template.get('empty'));
                     }
                     scroll.append(files.render());
                 }, function() {
                     Lampa.Select.close();
-                    Lampa.Noty.show('Помилка запиту через Vercel');
+                    Lampa.Noty.show('Помилка проксі (перевірте Vercel)');
                     files.append(Lampa.Template.get('empty'));
                     scroll.append(files.render());
                 });
