@@ -55,7 +55,7 @@
             this.create = function() {
                 var _this = this;
                 var title = object.movie.title || object.movie.name;
-                // Використовуємо VideoCDN API
+                // Використовуємо короткий метод API для швидкого пошуку
                 var search_url = 'https://videocdn.tv/api/short?api_token=3i40v5i7z6CcU4SHe627S74y704mIu62&title=' + encodeURIComponent(title);
                 var final_url = api_proxy + encodeURIComponent(search_url);
 
@@ -63,21 +63,27 @@
 
                 network.silent(final_url, function(json) {
                     Lampa.Select.close();
-                    var items = json.data || json; // Підтримка різних форматів API
+                    
+                    // ФІКС: Глибока перевірка наявності масиву даних
+                    var items = [];
+                    if (json) {
+                        if (Array.isArray(json.data)) items = json.data;
+                        else if (Array.isArray(json)) items = json;
+                    }
 
-                    if (Array.isArray(items) && items.length > 0) {
+                    if (items.length > 0) {
                         items.forEach(function(item) {
-                            var card = Lampa.Template.get('button', {title: item.title || item.name || 'Відео'});
+                            var card = Lampa.Template.get('button', {title: item.title || item.name || 'Дивитися'});
                             card.on('hover:enter', function() {
                                 var video_url = item.iframe_src || item.url;
                                 if (video_url) {
-                                    if (video_url.indexOf('http') === -1) video_url = 'https:' + video_url;
+                                    if (!video_url.startsWith('http')) video_url = 'https:' + video_url;
                                     Lampa.Player.play({
                                         url: video_url,
                                         title: item.title || title
                                     });
                                 } else {
-                                    Lampa.Noty.show('Посилання не знайдено');
+                                    Lampa.Noty.show('Відео не знайдено');
                                 }
                             });
                             files.append(card);
