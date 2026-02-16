@@ -2,8 +2,8 @@
     'use strict';
 
     function KozakTiv() {
-        var ICON_KOZAK = 'https://raw.githubusercontent.com/jordg888/Online/main/kozak.svg'; // Можете замінити на свою
-        var api_proxy = 'https://vercel-proxy-blue-six.vercel.app/';
+        var ICON_KOZAK = 'https://raw.githubusercontent.com/jordg888/Online/main/kozak.svg'; 
+        var api_proxy = 'https://vercel-proxy-blue-six.vercel.app/api?url=';
 
         this.init = function () {
             var _this = this;
@@ -11,9 +11,7 @@
                 if (e.type === 'complite') {
                     _this.cleanup();
                     setTimeout(function() {
-                        try {
-                            _this.render(e.data, e.object.activity.render());
-                        } catch (err) {}
+                        try { _this.render(e.data, e.object.activity.render()); } catch (err) {}
                     }, 200);
                 }
             });
@@ -30,8 +28,8 @@
             if (container.find('.lampa-kozak-button').length) return;
 
             var button = $('<div class="full-start__button selector lampa-kozak-button">' +
-                                '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right: 10px;"><path d="M12 2L4.5 20.29L5.21 21L12 18L18.79 21L19.5 20.29L12 2Z" fill="white"/></svg>' +
-                                '<span>Козак ТВ</span>' +
+                                '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right: 10px; vertical-align: middle;"><path d="M12 2L4.5 20.29L5.21 21L12 18L18.79 21L19.5 20.29L12 2Z" fill="white"/></svg>' +
+                                '<span style="vertical-align: middle;">Козак ТВ</span>' +
                             '</div>');
 
             var buttons_container = container.find('.full-start-new__buttons, .full-start__buttons');
@@ -57,35 +55,41 @@
             this.create = function() {
                 var _this = this;
                 var title = object.movie.title || object.movie.name;
-                var search_url = 'https://videocdn.tv/api/movies?api_token=3i40v5i7z6CcU4SHe627S74y704mIu62&title=' + encodeURIComponent(title);
-                var final_url = api_proxy + '?url=' + encodeURIComponent(search_url);
+                // Використовуємо VideoCDN API
+                var search_url = 'https://videocdn.tv/api/short?api_token=3i40v5i7z6CcU4SHe627S74y704mIu62&title=' + encodeURIComponent(title);
+                var final_url = api_proxy + encodeURIComponent(search_url);
 
-                Lampa.Select.show({title: 'Пошук...'});
+                Lampa.Select.show({title: 'Пошук на Козак ТВ...'});
 
                 network.silent(final_url, function(json) {
                     Lampa.Select.close();
-                    // БЕЗПЕЧНА ПЕРЕВІРКА: тепер не "впаде"
-                    if (json && json.data && Array.isArray(json.data)) {
-                        json.data.forEach(function(item) {
-                            var card = Lampa.Template.get('button', {title: item.title});
+                    var items = json.data || json; // Підтримка різних форматів API
+
+                    if (Array.isArray(items) && items.length > 0) {
+                        items.forEach(function(item) {
+                            var card = Lampa.Template.get('button', {title: item.title || item.name || 'Відео'});
                             card.on('hover:enter', function() {
-                                if (item.iframe_src) {
+                                var video_url = item.iframe_src || item.url;
+                                if (video_url) {
+                                    if (video_url.indexOf('http') === -1) video_url = 'https:' + video_url;
                                     Lampa.Player.play({
-                                        url: 'https:' + item.iframe_src,
-                                        title: item.title
+                                        url: video_url,
+                                        title: item.title || title
                                     });
+                                } else {
+                                    Lampa.Noty.show('Посилання не знайдено');
                                 }
                             });
                             files.append(card);
                         });
                     } else {
-                        Lampa.Noty.show('Нічого не знайдено або помилка сервера');
+                        Lampa.Noty.show('Нічого не знайдено');
                         files.append(Lampa.Template.get('empty'));
                     }
                     scroll.append(files.render());
                 }, function() {
                     Lampa.Select.close();
-                    Lampa.Noty.show('Сервер 404: Перевірте папки на GitHub');
+                    Lampa.Noty.show('Помилка запиту через Vercel');
                     files.append(Lampa.Template.get('empty'));
                     scroll.append(files.render());
                 });
