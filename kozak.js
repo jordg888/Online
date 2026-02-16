@@ -3,7 +3,6 @@
 
     function KozakTiv() {
         var ICON_KOZAK = 'https://raw.githubusercontent.com/jordg888/Online/main/kozak.svg'; 
-        // Твоя робоча адреса проксі
         var api_proxy = 'https://vercel-proxy-blue-six.vercel.app/api?url=';
 
         this.init = function () {
@@ -49,61 +48,65 @@
         };
 
         this.component = function(object) {
-            var network = new Lampa.Reguest();
             var scroll = new Lampa.Scroll({mask: true, over: true});
             var files = new Lampa.Explorer(object);
             
             this.create = function() {
                 var _this = this;
                 var title = object.movie.title || object.movie.name;
-                // Використовуємо VideoCDN API через твій проксі
                 var search_url = 'https://videocdn.tv/api/short?api_token=3i40v5i7z6CcU4SHe627S74y704mIu62&title=' + encodeURIComponent(title);
                 var final_url = api_proxy + encodeURIComponent(search_url);
 
                 Lampa.Select.show({title: 'Пошук на Козак ТВ...'});
 
-                network.silent(final_url, function(json) {
-                    Lampa.Select.close();
-                    
-                    // БЕЗПЕЧНА ПЕРЕВІРКА ДАНИХ
-                    var items = [];
-                    if (json && json.data && Array.isArray(json.data)) items = json.data;
-                    else if (Array.isArray(json)) items = json;
-
-                    if (items.length > 0) {
-                        items.forEach(function(item) {
-                            var card = Lampa.Template.get('button', {title: item.title || item.name || 'Дивитися'});
-                            card.on('hover:enter', function() {
-                                var video_url = item.iframe_src || item.url;
-                                if (video_url) {
-                                    if (!video_url.startsWith('http')) video_url = 'https:' + video_url;
-                                    Lampa.Player.play({
-                                        url: video_url,
-                                        title: item.title || title
+                // ВИКОРИСТОВУЄМО ПРЯМИЙ AJAX ДЛЯ ПОВНОГО КОНТРОЛЮ
+                $.ajax({
+                    url: final_url,
+                    method: 'GET',
+                    dataType: 'text', // Отримуємо як текст, щоб не "впасти" при помилці JSON
+                    timeout: 10000,
+                    success: function(response) {
+                        Lampa.Select.close();
+                        try {
+                            var json = JSON.parse(response);
+                            var items = json.data || (Array.isArray(json) ? json : []);
+                            
+                            if (items.length > 0) {
+                                items.forEach(function(item) {
+                                    var card = Lampa.Template.get('button', {title: item.title || item.name || 'Дивитися'});
+                                    card.on('hover:enter click', function() {
+                                        var v_url = item.iframe_src || item.url;
+                                        if (v_url) {
+                                            if (!v_url.startsWith('http')) v_url = 'https:' + v_url;
+                                            Lampa.Player.play({ url: v_url, title: item.title || title });
+                                        }
                                     });
-                                } else {
-                                    Lampa.Noty.show('Відео не знайдено');
-                                }
-                            });
-                            files.append(card);
-                        });
-                    } else {
-                        Lampa.Noty.show('На жаль, нічого не знайдено');
+                                    files.append(card);
+                                });
+                            } else {
+                                Lampa.Noty.show('Нічого не знайдено');
+                                files.append(Lampa.Template.get('empty'));
+                            }
+                        } catch (e) {
+                            console.log('Kozak: JSON parse error', response);
+                            Lampa.Noty.show('Помилка даних від сервера');
+                            files.append(Lampa.Template.get('empty'));
+                        }
+                        scroll.append(files.render());
+                    },
+                    error: function() {
+                        Lampa.Select.close();
+                        Lampa.Noty.show('Помилка зв\'язку з Vercel');
                         files.append(Lampa.Template.get('empty'));
+                        scroll.append(files.render());
                     }
-                    scroll.append(files.render());
-                }, function() {
-                    Lampa.Select.close();
-                    Lampa.Noty.show('Помилка проксі (перевірте Vercel)');
-                    files.append(Lampa.Template.get('empty'));
-                    scroll.append(files.render());
                 });
 
                 return scroll.render();
             };
 
             this.render = function() { return this.create(); };
-        };
+        }
     }
 
     if (window.Lampa) new KozakTiv().init();
