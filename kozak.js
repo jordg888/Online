@@ -32,37 +32,38 @@
 
         Lampa.Component.add('kozak_mod', function(object) {
             var scroll = new Lampa.Scroll({mask: true, over: true});
-            var container = $('<div class="kozak-list"></div>');
+            var list_container = $('<div style="padding: 20px;"></div>');
             var title = object.movie.title || object.movie.name;
             
             this.create = function() {
                 var _this = this;
                 
-                // Створюємо перемикач балансерів вручну
-                var tabs = $('<div class="kozak-tabs" style="display:flex; padding: 10px; gap: 10px;"></div>');
-                var sources = [
-                    { name: 'Ashdi (UA)', id: 'ashdi' },
-                    { name: 'VideoCDN', id: 'vcdn' }
-                ];
+                // Створюємо заголовок і кнопки балансерів
+                var head = $('<div style="margin-bottom: 20px;">' +
+                                '<h2 style="margin-bottom: 15px;">Оберіть балансер:</h2>' +
+                                '<div style="display: flex; gap: 10px;" class="kozak-nav"></div>' +
+                             '</div>');
+                
+                var btn_ashdi = $('<div class="selector" style="padding: 15px 25px; background: rgba(255,255,255,0.1); border-radius: 8px;">Ashdi (UA)</div>');
+                var btn_vcdn = $('<div class="selector" style="padding: 15px 25px; background: rgba(255,255,255,0.1); border-radius: 8px;">VideoCDN</div>');
 
-                sources.forEach(function(s) {
-                    var tab = $('<div class="selector tab-button" style="padding: 10px 20px; background: rgba(255,255,255,0.1); border-radius: 5px;">' + s.name + '</div>');
-                    tab.on('hover:enter click', function() {
-                        _this.load(s.id);
-                    });
-                    tabs.append(tab);
-                });
+                btn_ashdi.on('hover:enter click', function() { _this.load('ashdi'); });
+                btn_vcdn.on('hover:enter click', function() { _this.load('vcdn'); });
 
-                scroll.append(tabs);
-                scroll.append(container);
+                head.find('.kozak-nav').append(btn_ashdi).append(btn_vcdn);
+                list_container.append(head);
+                
+                // Місце для результатів
+                var results_box = $('<div class="kozak-results" style="margin-top: 20px;"></div>');
+                list_container.append(results_box);
 
-                this.load('ashdi'); // Перший запуск
+                scroll.append(list_container);
                 return scroll.render();
             };
 
             this.load = function(type) {
-                container.empty();
-                Lampa.Select.show({title: 'Шукаємо...'});
+                var box = list_container.find('.kozak-results');
+                box.empty().append('<div style="padding: 20px;">Пошук...</div>');
                 
                 var base = type === 'ashdi' 
                     ? 'https://ashdi.vip/api/video?title=' 
@@ -73,32 +74,40 @@
                 $.ajax({
                     url: url,
                     method: 'GET',
-                    success: function(json) {
-                        Lampa.Select.close();
-                        var items = json && json.data ? json.data : (Array.isArray(json) ? json : []);
-                        
-                        if (items.length > 0) {
-                            items.forEach(function(item) {
-                                var name = item.title || item.name || 'Відео';
-                                var card = $('<div class="selector button-card" style="padding: 15px; margin: 5px; background: rgba(255,255,255,0.05); border-radius: 10px;">' + name + '</div>');
-                                card.on('hover:enter click', function() {
-                                    var link = item.iframe_src || item.url;
-                                    if (link) {
-                                        if (!link.startsWith('http')) link = 'https:' + link;
-                                        Lampa.Player.play({ url: link, title: name });
-                                    }
+                    timeout: 10000,
+                    success: function(response) {
+                        box.empty();
+                        try {
+                            // Якщо прийшов текст замість JSON, спробуємо його розпарсити
+                            var json = (typeof response === 'string') ? JSON.parse(response) : response;
+                            var items = json && json.data ? json.data : (Array.isArray(json) ? json : []);
+                            
+                            if (items && items.length > 0) {
+                                items.forEach(function(item) {
+                                    if (!item) return;
+                                    var name = item.title || item.name || 'Дивитися відео';
+                                    var card = $('<div class="selector" style="padding: 15px; margin-bottom: 8px; background: rgba(255,255,255,0.05); border-radius: 6px; border-left: 4px solid #fff;">' + name + '</div>');
+                                    
+                                    card.on('hover:enter click', function() {
+                                        var link = item.iframe_src || item.url;
+                                        if (link) {
+                                            if (!link.startsWith('http')) link = 'https:' + link;
+                                            Lampa.Player.play({ url: link, title: name });
+                                        }
+                                    });
+                                    box.append(card);
                                 });
-                                container.append(card);
-                            });
-                            // Оновлюємо контролер, щоб кнопки стали клікабельними
-                            Lampa.Controller.enable('content');
-                        } else {
-                            Lampa.Noty.show('Нічого не знайдено');
+                                // Обов'язково вмикаємо навігацію для нових елементів
+                                Lampa.Controller.enable('content');
+                            } else {
+                                box.append('<div style="padding: 20px; color: #aaa;">Нічого не знайдено на цьому балансері</div>');
+                            }
+                        } catch (e) {
+                            box.append('<div style="padding: 20px; color: red;">Сервер повернув невірні дані</div>');
                         }
                     },
                     error: function() {
-                        Lampa.Select.close();
-                        Lampa.Noty.show('Помилка проксі');
+                        box.empty().append('<div style="padding: 20px; color: red;">Помилка проксі. Перевірте Vercel.</div>');
                     }
                 });
             };
