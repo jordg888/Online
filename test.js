@@ -1,44 +1,26 @@
 (function() {
     'use strict';
     
-    console.log('🚀 Фінальна версія');
-    
     setTimeout(function() {
-        console.log('Додаємо кнопку...');
-        
-        // Шукаємо контейнер
         var container = $('.full-start__buttons, .full-start-new__buttons, .card__info, .info-block').first();
         
         if (container.length) {
-            console.log('✅ Контейнер знайдено');
+            // Беремо першу існуючу кнопку як зразок
+            var sampleButton = container.find('.selector').first();
             
-            // Створюємо кнопку як копію сусідніх кнопок
-            var button = $('<div class="full-start__button selector">' +
-                           '<div style="font-size: 24px; width: 1.2em;">⚖️</div>' +
-                           '<span>Балансер</span>' +
-                           '</div>');
-            
-            // Додаємо в контейнер
-            container.append(button);
-            
-            // Правильний обробник подій для Lampa
-            button.on('hover:enter click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('✅ Кнопку натиснуто');
+            if (sampleButton.length) {
+                // Копіюємо стилі з існуючої кнопки
+                var button = sampleButton.clone();
+                button.empty();
+                button.append('<div style="font-size: 24px;">⚖️</div><span>Балансер</span>');
                 
-                // Показуємо повідомлення
-                Lampa.Noty.show('Працює!');
+                container.append(button);
                 
-                // Через 2 секунди прибираємо
-                setTimeout(function() {
-                    Lampa.Noty.hide();
-                }, 2000);
-            });
-            
-            console.log('✅ Кнопку додано');
-        } else {
-            console.log('❌ Контейнер не знайдено');
+                button.on('click', function() {
+                    Lampa.Noty.show('Працює!');
+                    setTimeout(function() { Lampa.Noty.hide(); }, 2000);
+                });
+            }
         }
     }, 3000);
 })();
