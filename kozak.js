@@ -2,9 +2,6 @@
     'use strict';
 
     function KozakTiv() {
-        // Використовуємо те саме API, що й у професійному плагіні
-        var api_base = 'https://bbe.lme.isroot.in/api/v2';
-
         this.init = function () {
             var _this = this;
             Lampa.Listener.follow('full', function (e) {
@@ -30,22 +27,29 @@
             container.append(button);
 
             button.on('hover:enter click', function() {
-                var movie = data.movie;
+                // ПЕРЕЛОМНИЙ МОМЕНТ: 
+                // Ми не даємо посилання, ми викликаємо внутрішній пошук Лампи через робочий балансер
+                Lampa.Component.add('kozak_online', Lampa.Component.get('online'));
                 
-                // Штовхаємо Лампу відкрити стандартний онлайн-компонент
+                var movie = data.movie;
+                var url = 'https://api.vokino.tv/v2/online'; // Використовуємо стабільне API Vokino
+
                 Lampa.Activity.push({
-                    title: 'Козак ТВ: ' + (movie.title || movie.name),
-                    component: 'online', 
+                    title: 'Козак ТВ',
+                    component: 'kozak_online',
                     movie: movie,
                     page: 1,
-                    // Ми використовуємо метод пошуку 'all', який об'єднує Ashdi, VideoCDN та інші
-                    url: api_base + '/search?source=all&tmdb_id=' + (movie.id || '') + '&title=' + encodeURIComponent(movie.title || movie.name)
+                    url: url
                 });
             });
         };
     }
 
-    if (window.Lampa) {
-        new KozakTiv().init();
-    }
+    // Чекаємо, поки Лампа повністю завантажиться, щоб підключити всі модулі
+    var timer = setInterval(function(){
+        if(window.Lampa && Lampa.Component) {
+            clearInterval(timer);
+            new KozakTiv().init();
+        }
+    }, 500);
 })();
