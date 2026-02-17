@@ -4,16 +4,19 @@
     setTimeout(function() {
         var container = $('.full-start__buttons, .full-start-new__buttons, .card__info, .info-block').first();
         
-        if (container.length && !$('.my-test-btn').length) {
+        if (container.length) {
+            // Створюємо кнопку через raw DOM елемент
+            var div = document.createElement('div');
+            div.className = 'selector';
+            div.style.cssText = 'padding: 15px; background: #ff5722; color: white; text-align: center; margin: 5px; border-radius: 5px;';
+            div.innerHTML = '⚖️ КНОПКА';
             
-            var button = $('<div class="my-test-btn" style="padding: 10px; background: #ff5722; color: white; text-align: center; margin: 5px;">⚖️ ТЕСТ</div>');
+            // Додаємо через raw JavaScript
+            div.onclick = function() {
+                alert('Працює!');
+            };
             
-            container.append(button);
-            
-            // Ніяких Lampa функцій, тільки console.log
-            button.on('click', function() {
-                console.log('Кнопку натиснуто');
-            });
+            container[0].appendChild(div);
         }
     }, 3000);
 })();
