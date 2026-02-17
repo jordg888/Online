@@ -29,24 +29,43 @@
             button.on('hover:enter click', function() {
                 var movie = data.movie;
                 
-                // Вказуємо Лампі використовувати стандартний компонент онлайн
-                var component = Lampa.Storage.get('online_component', 'online');
+                // Створюємо активність онлайн
+                Lampa.Component.add('kozak_online', Lampa.Component.get('online'));
                 
-                Lampa.Activity.push({
-                    title: 'Козак ТВ: ' + (movie.title || movie.name),
-                    component: component,
+                var activity = {
+                    title: 'Козак ТВ',
+                    component: 'kozak_online',
                     movie: movie,
-                    page: 1,
-                    // Ми використовуємо ПРЯМИЙ вхід у базу BanderaOnline через їхній API-шлюз
-                    url: 'https://bbe.lme.isroot.in/api/v2/search?source=all&tmdb_id=' + (movie.id || '') + '&title=' + encodeURIComponent(movie.title || movie.name)
-                });
+                    page: 1
+                };
+
+                // ВАЖЛИВО: ми не даємо прямий URL, а налаштовуємо джерело так, 
+                // як це роблять плагіни, що працюють через bbe.lme.isroot.in
+                activity.onRender = function(object) {
+                    // Якщо в системі є фільтр, додаємо вибір балансерів
+                    if(object.filter) {
+                        object.filter.set('source', [
+                            {title: 'Усі джерела', source: 'all', selected: true},
+                            {title: 'Ashdi (UA)', source: 'ashdi'},
+                            {title: 'VideoCDN', source: 'vcdn'}
+                        ]);
+
+                        object.filter.onSelect = function(item) {
+                            object.search(item.source);
+                        };
+                    }
+                };
+
+                // Формуємо правильний запит до "Бандери"
+                activity.url = 'https://bbe.lme.isroot.in/api/v2/search?source=all&title=' + encodeURIComponent(movie.title || movie.name) + '&tmdb_id=' + (movie.id || '');
+
+                Lampa.Activity.push(activity);
             });
         };
     }
 
-    // Чекаємо готовності системи
     var timer = setInterval(function(){
-        if(window.Lampa && Lampa.Component) {
+        if(window.Lampa && Lampa.Component && Lampa.Component.get('online')) {
             clearInterval(timer);
             new KozakTiv().init();
         }
