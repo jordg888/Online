@@ -5,7 +5,7 @@
     
     var config = {
         name: 'My Balancer Plugin',
-        version: '1.0.9',
+        version: '1.1.0',
         apiBase: 'https://api-plug-lime.vercel.app/api'
     };
     
@@ -15,39 +15,45 @@
         this.init = function() {
             console.log('✅ Плагін ініціалізовано');
             
+            // Додаємо кнопку в картку (як у WikiFind)
+            this.setupCardButton();
+        };
+        
+        this.setupCardButton = function() {
             Lampa.Listener.follow('full', function(event) {
-                if (event.type === 'complite') {
+                if (event.type === 'complite' && Lampa.Page.current().name === 'card') {
                     setTimeout(function() {
                         try {
-                            var html = event.object.activity.render();
-                            _this.render(event.data, html);
+                            _this.addButtonToCard();
                         } catch (err) {
-                            console.log('Помилка рендеру:', err);
+                            console.log('Помилка:', err);
                         }
-                    }, 200);
+                    }, 300);
                 }
             });
         };
         
-        this.render = function(data, html) {
-            var container = $(html);
+        this.addButtonToCard = function() {
+            // Перевіряємо чи вже є кнопка
+            if ($('.my-balancer-btn').length) return;
             
-            if (container.find('.my-balancer-btn').length) {
-                return;
-            }
+            console.log('📌 Додаємо кнопку...');
             
+            // Створюємо кнопку (як у WikiFind)
             var button = $('<div class="full-start__button selector my-balancer-btn">' +
                                 '<div style="font-size: 24px; margin-right: 5px;">⚖️</div>' +
                                 '<span>Балансер</span>' +
                            '</div>');
             
+            // Додаємо обробник подій (як у WikiFind)
             button.on('hover:enter click', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
                 console.log('👆 Кнопку натиснуто!');
-                _this.openBalancerModal(data.movie || data);
+                _this.openModal();
             });
             
+            // Стилі
             var style = '<style>' +
                 '.my-balancer-btn { display: flex !important; align-items: center; justify-content: center; cursor: pointer; } ' +
                 '.my-balancer-btn:hover { opacity: 0.8; } ' +
@@ -57,7 +63,9 @@
                 $('head').append('<style id="my-balancer-style">' + style + '</style>');
             }
             
-            var buttonsContainer = container.find('.full-start-new__buttons, .full-start__buttons');
+            // Знаходимо контейнер з кнопками
+            var buttonsContainer = $('.full-start-new__buttons, .full-start__buttons');
+            
             if (buttonsContainer.length) {
                 var neighbors = buttonsContainer.find('.selector');
                 if (neighbors.length >= 2) {
@@ -65,87 +73,32 @@
                 } else {
                     buttonsContainer.append(button);
                 }
-                console.log('✅ Кнопку додано');
+                console.log('✅ Кнопку додано!');
             }
         };
         
-        this.openBalancerModal = function(movieData) {
-            console.log('📱 Відкриваємо модальне вікно для:', movieData);
+        this.openModal = function() {
+            console.log('📱 Відкриваємо модальне вікно');
             
-            // Показуємо повідомлення що завантажуємо
-            Lampa.Noty.show('Завантаження...');
+            // Отримуємо дані фільму
+            var movieData = Lampa.Page.current().data || {};
             
-            // Створюємо просте модальне вікно
-            var modalContent = '<div style="padding: 20px; text-align: center;">' +
-                '<div style="margin-bottom: 20px;">' +
-                    '<h3>' + (movieData.title || movieData.name || 'Фільм') + '</h3>' +
-                    (movieData.year ? '<p>Рік: ' + movieData.year + '</p>' : '') +
-                '</div>' +
-                
-                '<div class="my-balancer-list" style="margin: 20px 0;">' +
-                    '<div class="selector balancer-item" style="padding: 15px; margin: 5px 0; background: rgba(255,87,34,0.2); border-radius: 8px;" data-id="uaflix">Uaflix</div>' +
-                    '<div class="selector balancer-item" style="padding: 15px; margin: 5px 0; background: rgba(255,87,34,0.2); border-radius: 8px;" data-id="animeon">AnimeON</div>' +
-                    '<div class="selector balancer-item" style="padding: 15px; margin: 5px 0; background: rgba(255,87,34,0.2); border-radius: 8px;" data-id="bamboo">Bamboo</div>' +
-                    '<div class="selector balancer-item" style="padding: 15px; margin: 5px 0; background: rgba(255,87,34,0.2); border-radius: 8px;" data-id="mikai">Mikai</div>' +
-                '</div>' +
-                
-                '<div style="margin: 20px 0;">' +
-                    '<label class="selector" style="display: flex; align-items: center; justify-content: center; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 8px;">' +
-                        '<input type="checkbox" id="new-episode" style="width: 20px; height: 20px; margin-right: 10px;"> Тільки нові серії' +
-                    '</label>' +
-                '</div>' +
-                
-                '<button class="selector" id="play-btn" style="width: 100%; padding: 15px; background: #ff5722; color: white; border: none; border-radius: 8px; font-size: 18px; margin-top: 10px;" disabled>Оберіть балансер</button>' +
-                
-                '<div id="modal-status" style="text-align: center; margin-top: 10px;"></div>' +
-            '</div>';
-            
-            // Ховаємо повідомлення
-            Lampa.Noty.hide();
-            
-            // Створюємо і показуємо модальне вікно
+            // Просте модальне вікно (як у Bandera)
             var modal = new Lampa.Modal({
                 title: 'Вибір балансера',
-                content: modalContent
+                content: '<div style="padding: 20px;">' +
+                    '<p><b>' + (movieData.title || movieData.name) + '</b></p>' +
+                    '<div class="selector" style="padding: 15px; margin: 10px 0; background: #ff5722; border-radius: 8px;" onclick="Lampa.Modal.close()">Uaflix</div>' +
+                    '<div class="selector" style="padding: 15px; margin: 10px 0; background: #ff5722; border-radius: 8px;" onclick="Lampa.Modal.close()">AnimeON</div>' +
+                    '<div class="selector" style="padding: 15px; margin: 10px 0; background: #ff5722; border-radius: 8px;" onclick="Lampa.Modal.close()">Bamboo</div>' +
+                    '</div>'
             });
             
             modal.show();
-            
-            // Додаємо обробники подій після появи модального вікна
-            setTimeout(function() {
-                var selectedId = null;
-                
-                // Обробка вибору балансера
-                $('.balancer-item').on('hover:enter click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    $('.balancer-item').removeClass('selected').css('background', 'rgba(255,87,34,0.2)');
-                    $(this).addClass('selected').css('background', '#ff5722');
-                    selectedId = $(this).data('id');
-                    $('#play-btn').prop('disabled', false);
-                    $('#modal-status').html('Вибрано: ' + $(this).text());
-                });
-                
-                // Обробка кнопки "Дивитися"
-                $('#play-btn').on('hover:enter click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    if (!selectedId) return;
-                    
-                    var newEpisode = $('#new-episode').is(':checked') ? 'так' : 'ні';
-                    $('#modal-status').html('⏳ Шукаємо відео...');
-                    
-                    // Тут буде запит до API
-                    setTimeout(function() {
-                        $('#modal-status').html('✅ Демо: вибрано ' + selectedId + ', нова серія: ' + newEpisode);
-                    }, 1000);
-                });
-            }, 100);
         };
     }
     
+    // Запускаємо плагін
     if (window.Lampa) {
         new MyBalancerPlugin().init();
         console.log('🎯 Плагін зареєстровано');
