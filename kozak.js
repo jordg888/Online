@@ -2,23 +2,39 @@
     'use strict';
 
     function KozakTiv() {
-        var network = new Lampa.Reguest(); // Системний метод запитів
-
         this.init = function () {
-            Lampa.Listener.follow('full', (e) => {
-                if (e.type === 'complite') this.render(e.data, e.object.activity.render());
+            var _this = this;
+            Lampa.Listener.follow('full', function (e) {
+                if (e.type === 'complite') {
+                    _this.cleanup();
+                    // Додаємо кнопку через таймер, щоб встиг відмалюватися основний інтерфейс
+                    setTimeout(function() {
+                        _this.render(e.data, e.object.activity.render());
+                    }, 300);
+                }
             });
         };
 
+        this.cleanup = function() {
+            $('.lampa-kozak-button').remove();
+        };
+
         this.render = function (data, html) {
-            var button = $('<div class="full-start__button selector"><span>Козак ТВ</span></div>');
-            button.on('hover:enter click', () => this.open(data.movie));
-            $(html).find('.full-start-new__buttons, .full-start__buttons').append(button);
+            var _this = this;
+            var button = $('<div class="full-start__button selector lampa-kozak-button"><span>Козак ТВ</span></div>');
+            
+            button.on('hover:enter click', function() {
+                _this.open(data.movie);
+            });
+
+            var container = $(html).find('.full-start-new__buttons, .full-start__buttons');
+            if (container.find('.lampa-kozak-button').length) return;
+            container.append(button);
         };
 
         this.open = function (movie) {
             var _this = this;
-            var current_source = 'ashdi'; // Джерело за замовчуванням
+            var current_source = 'ashdi';
 
             Lampa.Activity.push({
                 title: 'Козак ТВ',
@@ -26,62 +42,66 @@
                 movie: movie,
                 page: 1,
                 onRender: function(object) {
-                    // --- ТУТ СТВОРЮЮТЬСЯ ФІЛЬТРИ ---
+                    // РЕЄСТРУЄМО ФІЛЬТРИ (ВИБІР ДЖЕРЕЛА)
                     object.filter.set('source', [
                         {title: 'Ashdi (UA)', source: 'ashdi', selected: true},
                         {title: 'VideoCDN', source: 'vcdn'}
                     ]);
 
-                    // Подія при зміні фільтра
+                    // ЛОГІКА ПЕРЕМИКАННЯ ФІЛЬТРІВ
                     object.filter.onSelect = function(item) {
                         current_source = item.source;
-                        object.search(); // Перезапуск пошуку
+                        object.search(); 
                     };
 
-                    // Функція самого пошуку
+                    // ФУНКЦІЯ ПОШУКУ
                     object.search = function() {
                         object.loading(true);
-                        var url = '';
+                        var base_url = current_source === 'ashdi' 
+                            ? 'https://ashdi.vip/api/video?title=' 
+                            : 'https://videocdn.tv/api/short?api_token=3i40v5i7z6CcU4SHe627S74y704mIu62&title=';
                         
-                        if(current_source === 'ashdi') {
-                            url = 'https://ashdi.vip/api/video?title=' + encodeURIComponent(movie.title || movie.name);
-                        } else {
-                            url = 'https://videocdn.tv/api/short?api_token=3i40v5i7z6CcU4SHe627S74y704mIu62&title=' + encodeURIComponent(movie.title || movie.name);
-                        }
+                        var query_url = 'https://corsproxy.io/?' + encodeURIComponent(base_url + encodeURIComponent(movie.title || movie.name));
 
-                        // Використовуємо проксі, щоб не було "Пусто" через блокування
-                        var proxied_url = 'https://corsproxy.io/?' + encodeURIComponent(url);
+                        $.ajax({
+                            url: query_url,
+                            method: 'GET',
+                            dataType: 'json',
+                            success: function(res) {
+                                var raw = res.data || res;
+                                if (raw && raw.length) {
+                                    var items = raw.map(function(item) {
+                                        return {
+                                            title: item.title || movie.title,
+                                            file: item.file || item.iframe_src || item.url,
+                                            quality: item.quality || 'HD',
+                                            info: current_source.toUpperCase()
+                                        };
+                                    });
 
-                        network.silent(proxied_url, function(res) {
-                            if (res && (res.length || res.data)) {
-                                var raw_data = res.data || res;
-                                // Перетворюємо в зрозумілий для Lampa формат
-                                var items = raw_data.map(function(item) {
-                                    return {
-                                        title: item.title || movie.title,
-                                        file: item.file || item.iframe_src || item.url,
-                                        quality: item.quality || '720p',
-                                        info: current_source.toUpperCase()
-                                    };
-                                });
-
-                                object.draw(items, {
-                                    onEnter: (item) => Lampa.Player.play({url: item.file, title: item.title})
-                                });
-                            } else {
-                                object.empty();
+                                    object.draw(items, {
+                                        onEnter: function(item) {
+                                            Lampa.Player.play({url: item.file, title: item.title});
+                                        }
+                                    });
+                                } else {
+                                    object.empty();
+                                }
+                                object.loading(false);
+                            },
+                            error: function() {
+                                object.doesNotAnswer();
                             }
-                            object.loading(false);
-                        }, function() {
-                            object.doesNotAnswer();
                         });
                     };
 
-                    object.search(); // Запускаємо перший пошук при відкритті
+                    object.search(); // Запуск при відкритті
                 }
             });
         };
     }
 
-    if (window.Lampa) new KozakTiv().init();
+    if (window.Lampa) {
+        new KozakTiv().init();
+    }
 })();
