@@ -1,27 +1,39 @@
 (function() {
     'use strict';
     
-    console.log('🚀 Простий плагін');
+    console.log('🚀 Фінальна версія');
     
-    // Чекаємо 3 секунди і додаємо кнопку
     setTimeout(function() {
         console.log('Додаємо кнопку...');
         
-        // Шукаємо контейнер з кнопками (який був підсвічений червоним)
+        // Шукаємо контейнер
         var container = $('.full-start__buttons, .full-start-new__buttons, .card__info, .info-block').first();
         
         if (container.length) {
             console.log('✅ Контейнер знайдено');
             
-            // Створюємо кнопку
-            var button = $('<div class="selector" style="display: inline-block; margin: 5px; padding: 10px 15px; background: #ff5722; color: white; border-radius: 5px; font-size: 16px;">⚖️ БАЛАНСЕР</div>');
+            // Створюємо кнопку як копію сусідніх кнопок
+            var button = $('<div class="full-start__button selector">' +
+                           '<div style="font-size: 24px; width: 1.2em;">⚖️</div>' +
+                           '<span>Балансер</span>' +
+                           '</div>');
             
             // Додаємо в контейнер
             container.append(button);
             
-            // Обробник кліку
-            button.on('click', function() {
-                alert('Кнопка працює!');
+            // Правильний обробник подій для Lampa
+            button.on('hover:enter click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('✅ Кнопку натиснуто');
+                
+                // Показуємо повідомлення
+                Lampa.Noty.show('Працює!');
+                
+                // Через 2 секунди прибираємо
+                setTimeout(function() {
+                    Lampa.Noty.hide();
+                }, 2000);
             });
             
             console.log('✅ Кнопку додано');
