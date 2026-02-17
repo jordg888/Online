@@ -2,48 +2,74 @@
     'use strict';
 
     function KozakTiv() {
+        // Ми використовуємо відкритий CORS-проксі для стабільності
+        var proxy = 'https://corsproxy.io/?'; 
+
         this.init = function () {
-            var _this = this;
-            Lampa.Listener.follow('full', function (e) {
+            Lampa.Listener.follow('full', (e) => {
                 if (e.type === 'complite') {
-                    _this.cleanup();
-                    setTimeout(function() {
-                        _this.render(e.data, e.object.activity.render());
-                    }, 300);
+                    this.render(e.data, e.object.activity.render());
                 }
             });
         };
 
-        this.cleanup = function() {
-            $('.lampa-kozak-button').remove();
+        this.render = function (data, html) {
+            var button = $('<div class="full-start__button selector"><span>Козак ТВ</span></div>');
+            var container = $(html).find('.full-start-new__buttons, .full-start__buttons');
+            
+            button.on('hover:enter click', () => {
+                this.open(data.movie);
+            });
+            container.append(button);
         };
 
-        this.render = function (data, html) {
-            var _this = this;
-            var button = $('<div class="full-start__button selector lampa-kozak-button" style="background: #ffde1a !important; color: #000 !important;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right:10px;vertical-align:middle;"><path d="M12 2L4.5 20.29L5.21 21L12 18L18.79 21L19.5 20.29L12 2Z" fill="#000"/></svg><span style="vertical-align:middle; font-weight: bold;">ДИВИТИСЬ (КОЗАК ТВ)</span></div>');
-            
-            var container = $(html).find('.full-start-new__buttons, .full-start__buttons');
-            if (container.find('.lampa-kozak-button').length) return;
-            container.append(button);
-
-            button.on('hover:enter click', function() {
-                var movie = data.movie;
-                // Викликаємо системний онлайн-компонент
-                Lampa.Component.add('kozak_online', Lampa.Component.get('online'));
-                
-                Lampa.Activity.push({
-                    title: 'Козак ТВ',
-                    component: 'kozak_online',
-                    movie: movie,
-                    page: 1,
-                    // Використовуємо стабільний універсальний шлюз
-                    url: 'https://vokino.tv/api/v2/online'
-                });
+        this.open = function (movie) {
+            // Створюємо порожню активність (екран)
+            Lampa.Activity.push({
+                title: 'Козак ТВ',
+                component: 'online', // Використовуємо вбудований завантажувач
+                movie: movie,
+                page: 1,
+                onRender: (object) => {
+                    // Ось тут відбувається магія пошуку
+                    var url = proxy + encodeURIComponent('https://ashdi.vip/api/video?title=' + (movie.title || movie.name));
+                    
+                    $.ajax({
+                        url: url,
+                        method: 'GET',
+                        success: (res) => {
+                            // Перевіряємо, чи є дані
+                            if (res && res.length) {
+                                // Перетворюємо дані балансера у формат LAMPA
+                                var items = res.map(item => ({
+                                    title: item.title || movie.title,
+                                    file: item.file || item.url, // Посилання на відео
+                                    quality: item.quality || '720p',
+                                    info: 'Козак ТВ'
+                                }));
+                                
+                                // Малюємо список
+                                object.draw(items, {
+                                    onEnter: (item) => {
+                                        Lampa.Player.play({
+                                            url: item.file,
+                                            title: item.title
+                                        });
+                                    }
+                                });
+                                object.loading(false);
+                            } else {
+                                object.empty(); // Покаже "Тут порожньо", якщо масив пустий
+                            }
+                        },
+                        error: () => {
+                            object.doesNotAnswer(); // Покаже помилку мережі
+                        }
+                    });
+                }
             });
         };
     }
 
-    if (window.Lampa) {
-        new KozakTiv().init();
-    }
+    if (window.Lampa) new KozakTiv().init();
 })();
