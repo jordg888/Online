@@ -5,7 +5,7 @@
     
     var config = {
         name: 'My Balancer Plugin',
-        version: '1.0.5',
+        version: '1.0.6',
         apiBase: 'https://api-plug-lime.vercel.app/api'
     };
     
@@ -15,15 +15,10 @@
         this.init = function() {
             console.log('✅ Плагін ініціалізовано');
             
-            // Слідкуємо за подією full (як у WikiFind)
             Lampa.Listener.follow('full', function(event) {
                 if (event.type === 'complite') {
-                    console.log('📺 Отримано подію full: complite');
-                    
-                    // Чекаємо трохи, поки з'явиться картка
                     setTimeout(function() {
                         try {
-                            // Отримуємо HTML картки (як у WikiFind)
                             var html = event.object.activity.render();
                             _this.render(event.data, html);
                         } catch (err) {
@@ -35,25 +30,29 @@
         };
         
         this.render = function(data, html) {
-            console.log('🎨 Рендеримо кнопку...');
-            
             var container = $(html);
             
-            // Перевіряємо чи вже є наша кнопка
             if (container.find('.my-balancer-btn').length) {
-                console.log('Кнопка вже є');
                 return;
             }
             
-            // Створюємо кнопку (як у WikiFind)
+            // Створюємо кнопку (додаємо обидві події)
             var button = $('<div class="full-start__button selector my-balancer-btn">' +
                                 '<div style="font-size: 24px; margin-right: 5px;">⚖️</div>' +
                                 '<span>Балансер</span>' +
                            '</div>');
             
-            // Додаємо стилі (як у WikiFind)
+            // Додаємо обробник подій (ЯК У WIKIFIND)
+            button.on('hover:enter click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('👆 Кнопку натиснуто!');
+                _this.openBalancerModal(data.movie || data);
+            });
+            
             var style = '<style>' +
-                '.my-balancer-btn { display: flex !important; align-items: center; justify-content: center; } ' +
+                '.my-balancer-btn { display: flex !important; align-items: center; justify-content: center; cursor: pointer; } ' +
+                '.my-balancer-btn:hover { opacity: 0.8; } ' +
                 '.my-balancer-btn div { width: 1.6em; height: 1.6em; object-fit: contain; margin-right: 5px; } ' +
                 '</style>';
             
@@ -61,38 +60,45 @@
                 $('head').append('<style id="my-balancer-style">' + style + '</style>');
             }
             
-            // Знаходимо контейнер з кнопками (як у WikiFind)
             var buttonsContainer = container.find('.full-start-new__buttons, .full-start__buttons');
             
             if (buttonsContainer.length) {
-                // Додаємо кнопку після другої кнопки (як у WikiFind)
                 var neighbors = buttonsContainer.find('.selector');
                 if (neighbors.length >= 2) {
                     button.insertAfter(neighbors.eq(1));
                 } else {
                     buttonsContainer.append(button);
                 }
-                
-                console.log('✅ Кнопку додано!');
-            } else {
-                console.log('❌ Контейнер кнопок не знайдено');
+                console.log('✅ Кнопку додано з обробником подій');
             }
-            
-            // Додаємо обробник кліку
-            button.on('click', function() {
-                _this.openBalancerModal(data.movie || data);
-            });
         };
         
         this.openBalancerModal = function(movieData) {
             console.log('📱 Відкриваємо модальне вікно для:', movieData);
-            alert('Кнопка працює! Фільм: ' + (movieData.title || movieData.name));
             
-            // Тут буде ваш код з модальним вікном...
+            // Показуємо сповіщення що кнопка працює
+            Lampa.Noty.show('Завантаження балансерів...');
+            
+            // ТЕПЕР ДОДАМО ТЕСТОВЕ МОДАЛЬНЕ ВІКНО
+            var modal = new Lampa.Modal({
+                title: 'Вибір балансера',
+                content: '<div style="padding: 20px; text-align: center;">' +
+                         '<p>Фільм: <b>' + (movieData.title || movieData.name || 'Невідомо') + '</b></p>' +
+                         '<p>Виберіть балансер:</p>' +
+                         '<div style="margin: 20px 0;">' +
+                         '<button class="selector" style="width: 100%; margin: 5px 0;" onclick="alert(\'Вибрано Uaflix\')">Uaflix</button>' +
+                         '<button class="selector" style="width: 100%; margin: 5px 0;" onclick="alert(\'Вибрано AnimeON\')">AnimeON</button>' +
+                         '<button class="selector" style="width: 100%; margin: 5px 0;" onclick="alert(\'Вибрано Bamboo\')">Bamboo</button>' +
+                         '<button class="selector" style="width: 100%; margin: 5px 0;" onclick="alert(\'Вибрано Mikai\')">Mikai</button>' +
+                         '</div>' +
+                         '<label><input type="checkbox" id="new-episode"> Тільки нові серії</label>' +
+                         '</div>'
+            });
+            
+            modal.show();
         };
     }
     
-    // Запускаємо плагін (як у WikiFind)
     if (window.Lampa) {
         new MyBalancerPlugin().init();
         console.log('🎯 Плагін зареєстровано');
