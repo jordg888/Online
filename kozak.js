@@ -27,25 +27,24 @@
             container.append(button);
 
             button.on('hover:enter click', function() {
-                // ПЕРЕЛОМНИЙ МОМЕНТ: 
-                // Ми не даємо посилання, ми викликаємо внутрішній пошук Лампи через робочий балансер
-                Lampa.Component.add('kozak_online', Lampa.Component.get('online'));
-                
                 var movie = data.movie;
-                var url = 'https://api.vokino.tv/v2/online'; // Використовуємо стабільне API Vokino
-
+                
+                // Вказуємо Лампі використовувати стандартний компонент онлайн
+                var component = Lampa.Storage.get('online_component', 'online');
+                
                 Lampa.Activity.push({
-                    title: 'Козак ТВ',
-                    component: 'kozak_online',
+                    title: 'Козак ТВ: ' + (movie.title || movie.name),
+                    component: component,
                     movie: movie,
                     page: 1,
-                    url: url
+                    // Ми використовуємо ПРЯМИЙ вхід у базу BanderaOnline через їхній API-шлюз
+                    url: 'https://bbe.lme.isroot.in/api/v2/search?source=all&tmdb_id=' + (movie.id || '') + '&title=' + encodeURIComponent(movie.title || movie.name)
                 });
             });
         };
     }
 
-    // Чекаємо, поки Лампа повністю завантажиться, щоб підключити всі модулі
+    // Чекаємо готовності системи
     var timer = setInterval(function(){
         if(window.Lampa && Lampa.Component) {
             clearInterval(timer);
