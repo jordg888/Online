@@ -1,22 +1,36 @@
 (function() {
     'use strict';
     
-    // Простий плагін з кнопкою
+    console.log('🔍 ДІАГНОСТИКА: початок');
+    
     setTimeout(function() {
-        // Шукаємо контейнер з кнопками
-        var container = $('.full-start__buttons');
+        console.log('🔍 Шукаємо елементи...');
         
-        if (container.length) {
-            // Створюємо кнопку
-            var button = $('<div class="selector" style="padding: 10px; background: #ff5722; color: white; border-radius: 5px; margin: 5px;">⚖️ БАЛАНСЕР</div>');
+        // Перевіряємо всі можливі контейнери
+        var selectors = [
+            '.full-start__buttons',
+            '.full-start-new__buttons', 
+            '.card__buttons',
+            '.card__actions',
+            '.card__info',
+            '.card-content',
+            '.info-block',
+            '.buttons-block'
+        ];
+        
+        selectors.forEach(function(selector) {
+            var elements = $(selector);
+            console.log('Селектор "' + selector + '": знайдено ' + elements.length);
             
-            // Додаємо кнопку
-            container.append(button);
-            
-            // Обробник кліку
-            button.on('click', function() {
-                console.log('Кнопку натиснуто');
-            });
-        }
-    }, 2000);
+            if (elements.length) {
+                // Підсвічуємо знайдений елемент червоною рамкою
+                elements.css('border', '3px solid red');
+                console.log('✅ Знайдено!', selector);
+            }
+        });
+        
+        // Показуємо всю структуру сторінки
+        console.log('📄 Вміст сторінки:', $('body').html());
+        
+    }, 3000);
 })();
