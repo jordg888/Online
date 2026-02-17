@@ -1,187 +1,116 @@
 (function() {
-    // Назва та версія плагіна
-    var pluginName = 'Universal Media Plugin';
-    var version = '1.0.0';
+    'use strict';
     
-    // Конфігурація балансерів
-    var balancers = [
-        {
-            name: 'Балансер 1',
-            url: 'https://balanser1.com',
-            priority: 1
-        },
-        {
-            name: 'Балансер 2',
-            url: 'https://balanser2.com',
-            priority: 2
-        },
-        {
-            name: 'Балансер 3', 
-            url: 'https://balanser3.com',
-            priority: 3
-        }
-    ];
-
-    // Основний клас плагіна
-    function UniversalPlugin() {
+    // Налаштування плагіна
+    var config = {
+        name: 'My Balancer Plugin',
+        version: '1.0.0',
+        sourceKey: 'my_balancer',
+        apiBase: 'https://your-vercel-app.vercel.app/api' // Тимчасово, змінимо пізніше
+    };
+    
+    // Головний клас плагіна
+    function MyBalancerPlugin() {
+        
+        // Ініціалізація
         this.init = function() {
-            console.log(pluginName + ' v' + version + ' ініціалізовано');
-            this.registerSources();
+            console.log(config.name + ' v' + config.version + ' завантажено');
+            this.setupCardButton();
         };
-
-        this.registerSources = function() {
-            // Реєструємо джерело контенту
-            Lampa.Provider.add({
-                name: 'universal_media',
-                title: 'Universal Media',
-                search: this.search.bind(this),
-                item: this.getItem.bind(this),
-                watch: this.watch.bind(this)
-            });
-        };
-
-        // Пошук контенту
-        this.search = function(query, page, callback) {
-            var results = {
-                items: [],
-                page: page,
-                total: 0
-            };
-
-            // Тут логіка пошуку через балансери
-            this.loadFromBalancers('/search?q=' + encodeURIComponent(query) + '&page=' + page, function(data) {
-                if (data && data.items) {
-                    results.items = data.items.map(function(item) {
-                        return {
-                            id: item.id,
-                            title: item.title,
-                            poster: item.poster,
-                            year: item.year,
-                            type: item.type || 'movie' // movie, serial, cartoon
-                        };
-                    });
-                    results.total = data.total || results.items.length;
+        
+        // Додавання кнопки в картку фільму
+        this.setupCardButton = function() {
+            Lampa.Listener.follow('card', function(event) {
+                if (event.type === 'render' && event.card) {
+                    addButtonToCard(event.card, event.data);
                 }
-                callback(results);
             });
         };
-
-        // Отримання деталей елементу
-        this.getItem = function(item, callback) {
-            this.loadFromBalancers('/details/' + item.id, function(data) {
-                if (data) {
-                    item.description = data.description;
-                    item.genres = data.genres;
-                    item.country = data.country;
-                    item.duration = data.duration;
-                    
-                    // Для серіалів додаємо інформацію про сезони
-                    if (item.type === 'serial') {
-                        item.seasons = data.seasons;
-                    }
-                }
-                callback(item);
-            });
-        };
-
-        // Відтворення контенту
-        this.watch = function(item, callback) {
-            // Отримуємо посилання на відео через балансери
-            this.getVideoUrl(item, function(videoData) {
-                if (videoData && videoData.url) {
-                    Lampa.Player.play({
-                        url: videoData.url,
-                        title: item.title,
-                        subtitle: videoData.subtitle || null,
-                        audio: videoData.audio || null
-                    });
-                }
-                callback();
-            });
-        };
-
-        // Отримання URL відео через балансери з автоматичним перемиканням
-        this.getVideoUrl = function(item, callback) {
-            var self = this;
-            var currentBalancer = 0;
+        
+        // Функція додавання кнопки
+        function addButtonToCard(cardElement, movieData) {
+            // Перевіряємо, чи вже є наша кнопка
+            if (cardElement.find('.my-balancer-button').length > 0) return;
             
-            function tryNextBalancer() {
-                if (currentBalancer >= balancers.length) {
-                    console.error('Всі балансери недоступні');
-                    Lampa.Notify.show('Помилка завантаження відео');
-                    callback(null);
-                    return;
-                }
-
-                var balancer = balancers[currentBalancer];
-                console.log('Спроба підключення до ' + balancer.name);
-                
-                self.loadFromBalancer(balancer, '/video/' + item.id, function(response) {
-                    if (response && response.url) {
-                        callback(response);
-                    } else {
-                        currentBalancer++;
-                        tryNextBalancer();
-                    }
-                });
+            // Створюємо кнопку
+            var button = $('<div class="my-balancer-button selector--light">' +
+                           '<div class="selector__icon">⚖️</div>' +
+                           '<div class="selector__value">Вибрати балансер</div>' +
+                           '</div>');
+            
+            // Додаємо обробник кліку
+            button.on('click', function() {
+                openBalancerModal(movieData);
+            });
+            
+            // Знаходимо місце для вставки (після кнопки "Дивитися")
+            var target = cardElement.find('[data-action="watch"]').parent();
+            if (target.length) {
+                target.after(button);
+            } else {
+                // Якщо не знайшли, додаємо в кінець
+                cardElement.find('.card__content').append(button);
             }
-            
-            tryNextBalancer();
-        };
-
-        // Завантаження даних з балансерів
-        this.loadFromBalancers = function(path, callback) {
-            var self = this;
-            var currentBalancer = 0;
-            
-            function tryBalancer() {
-                if (currentBalancer >= balancers.length) {
-                    console.error('Всі балансери недоступні');
-                    callback(null);
-                    return;
-                }
-
-                var balancer = balancers[currentBalancer];
-                self.loadFromBalancer(balancer, path, function(response) {
-                    if (response) {
-                        callback(response);
-                    } else {
-                        currentBalancer++;
-                        tryBalancer();
-                    }
-                });
-            }
-            
-            tryBalancer();
-        };
-
-        // Завантаження з конкретного балансера
-        this.loadFromBalancer = function(balancer, path, callback) {
-            var url = balancer.url + path;
-            
-            Lampa.Utils.fetch(url, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                timeout: 10000
-            })
-            .then(function(response) {
-                return response.json();
-            })
-            .then(function(data) {
-                callback(data);
-            })
-            .catch(function(error) {
-                console.error('Помилка балансера ' + balancer.name + ': ' + error);
-                callback(null);
+        }
+        
+        // Функція відкриття модального вікна
+        function openBalancerModal(movieData) {
+            // Створюємо модальне вікно
+            var modal = new Lampa.Modal({
+                title: 'Вибір балансера',
+                content: createModalContent(movieData)
             });
-        };
+            
+            modal.show();
+        }
+        
+        // Створення вмісту модального вікна
+        function createModalContent(movieData) {
+            // Тут буде HTML для модалки
+            var html = '<div class="my-balancer-modal">' +
+                      '<style>' +
+                      '.my-balancer-modal { padding: 20px; }' +
+                      '.balancer-list { margin: 15px 0; }' +
+                      '.balancer-item { padding: 10px; margin: 5px 0; background: rgba(255,255,255,0.1); border-radius: 5px; cursor: pointer; }' +
+                      '.balancer-item.selected { background: #ff5722; }' +
+                      '.balancer-item:hover { background: rgba(255,87,34,0.5); }' +
+                      '.filter-item { margin: 15px 0; }' +
+                      '.filter-item label { margin-left: 10px; }' +
+                      '.play-button { width: 100%; padding: 15px; background: #ff5722; color: white; border: none; border-radius: 5px; font-size: 18px; cursor: pointer; }' +
+                      '.play-button:hover { background: #ff7043; }' +
+                      '</style>';
+            
+            // Список балансерів (поки статичний, потім будемо завантажувати)
+            var balancers = [
+                { id: 'balancer1', name: 'Балансер 1' },
+                { id: 'balancer2', name: 'Балансер 2' },
+                { id: 'balancer3', name: 'Балансер 3' }
+            ];
+            
+            html += '<div class="balancer-list">';
+            balancers.forEach(function(b) {
+                html += '<div class="balancer-item" data-id="' + b.id + '">' + b.name + '</div>';
+            });
+            html += '</div>';
+            
+            // Фільтр "Нова серія"
+            html += '<div class="filter-item">' +
+                   '<input type="checkbox" id="new-episode-filter">' +
+                   '<label for="new-episode-filter">Тільки нові серії</label>' +
+                   '</div>';
+            
+            // Кнопка відтворення
+            html += '<button class="play-button" disabled>Оберіть балансер</button>';
+            
+            html += '</div>';
+            
+            return html;
+        }
     }
-
-    // Додаємо плагін до Lampa
+    
+    // Реєструємо плагін
     if (typeof Lampa !== 'undefined' && Lampa.Plugin) {
-        Lampa.Plugin.add(new UniversalPlugin());
-        console.log(pluginName + ' v' + version + ' успішно завантажено');
+        Lampa.Plugin.add(new MyBalancerPlugin());
+        console.log('Плагін успішно зареєстровано');
     }
 })();
