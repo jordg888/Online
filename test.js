@@ -1,28 +1,51 @@
 (function() {
-    console.log('🔥 ТЕСТ: скрипт запущено');
+    'use strict';
     
-    // Чекаємо 5 секунд і додаємо кнопку в будь-яке місце
-    setTimeout(function() {
-        console.log('⏰ 5 секунд минуло, додаємо кнопку...');
-        
-        // Створюємо просту кнопку
-        var testButton = $('<div style="position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%); z-index: 9999; background: red; color: white; padding: 20px; border-radius: 10px; font-size: 20px; text-align: center;">🔴 ТЕСТОВА КНОПКА</div>');
-        
-        // Додаємо на сторінку
-        $('body').append(testButton);
-        
-        // Додаємо обробник кліку
-        testButton.on('click', function() {
-            alert('Кнопка працює!');
-        });
-        
-        console.log('✅ Кнопку додано в body');
-    }, 5000);
+    console.log('🔥 Фінальна версія');
     
-    // Перевіряємо чи є Lampa
-    if (typeof Lampa !== 'undefined') {
-        console.log('✅ Lampa знайдено');
-    } else {
-        console.log('❌ Lampa не знайдено');
+    function BalancerPlugin() {
+        this.init = function() {
+            console.log('Плагін ініціалізовано');
+            this.waitForCard();
+        };
+        
+        this.waitForCard = function() {
+            // Перевіряємо кожну секунду, чи відкрита картка
+            setInterval(function() {
+                var page = Lampa.Page.current();
+                if (page && page.name === 'card') {
+                    this.addButton();
+                }
+            }.bind(this), 1000);
+        };
+        
+        this.addButton = function() {
+            // Якщо кнопка вже є - не додаємо ще одну
+            if ($('.my-final-btn').length) return;
+            
+            console.log('Додаємо кнопку в картку');
+            
+            // Шукаємо контейнер з кнопками
+            var container = $('.full-start__buttons, .full-start-new__buttons').first();
+            
+            if (container.length) {
+                // Створюємо кнопку
+                var button = $('<div class="selector full-start__button my-final-btn">' +
+                               '<div style="font-size: 20px; margin-right: 5px;">⚖️</div>' +
+                               '<span>Балансер</span>' +
+                               '</div>');
+                
+                // Додаємо обробник
+                button.on('click', function() {
+                    alert('Працює!');
+                });
+                
+                // Додаємо в кінець контейнера
+                container.append(button);
+                console.log('✅ Кнопку додано в картку');
+            }
+        };
     }
+    
+    new BalancerPlugin().init();
 })();
