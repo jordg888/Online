@@ -3,8 +3,10 @@
     
     var config = {
         name: 'My Balancer Plugin',
-        version: '1.0.1',
-        sourceKey: 'my_balancer'
+        version: '1.0.2',
+        sourceKey: 'my_balancer',
+        // ВАШ URL (виправлено)
+        apiBase: 'https://vercel-proxy-phi-ecru-56.vercel.app/api'
     };
     
     function MyBalancerPlugin() {
@@ -15,17 +17,14 @@
         };
         
         this.setupCardButton = function() {
-            // Слідкуємо за рендером картки
             Lampa.Listener.follow('card', function(event) {
                 if (event.type == 'render') {
-                    // Даємо час на повний рендер картки
                     setTimeout(function() {
                         addButtonToCard(event.card);
                     }, 300);
                 }
             });
             
-            // Альтернативний спосіб - слідкуємо за змінами в DOM
             Lampa.Listener.follow('full', function(event) {
                 if (event.type == 'complite' && Lampa.Page.current().name == 'card') {
                     setTimeout(function() {
@@ -37,13 +36,10 @@
         };
         
         function addButtonToCard(card) {
-            // Перевіряємо чи є вже кнопка
             if (card.find('.my-balancer-btn').length > 0) return;
             
-            // Отримуємо дані фільму
             var movieData = Lampa.Page.current().data || {};
             
-            // Створюємо кнопку
             var button = $('<div class="my-balancer-btn selector--light" style="margin-top: 10px;">' +
                            '<div class="selector__icon">⚖️</div>' +
                            '<div class="selector__value">Вибрати балансер</div>' +
@@ -53,30 +49,38 @@
                 openBalancerModal(movieData);
             });
             
-            // Шукаємо місце для вставки - після блоку з інформацією
             var infoBlock = card.find('.card__info');
             if (infoBlock.length) {
                 infoBlock.append(button);
             } else {
-                // Якщо не знайшли, додаємо в кінець картки
                 card.append(button);
             }
-            
-            console.log('Кнопку додано', movieData);
         }
         
         function openBalancerModal(movieData) {
-            console.log('Відкриваємо модалку для:', movieData);
-            
-            var modal = new Lampa.Modal({
-                title: 'Вибір балансера',
-                content: createModalContent(movieData)
+            // Завантажуємо список балансерів з вашого API
+            loadBalancersFromAPI(movieData, function(balancers) {
+                var modal = new Lampa.Modal({
+                    title: 'Вибір балансера',
+                    content: createModalContent(movieData, balancers)
+                });
+                modal.show();
             });
-            
-            modal.show();
         }
         
-        function createModalContent(movieData) {
+        function loadBalancersFromAPI(movieData, callback) {
+            // Тут ми будемо робити запит до вашого API
+            // Поки що використаємо тестові дані
+            var testBalancers = [
+                { id: 'uaflix', name: 'Uaflix' },
+                { id: 'animeon', name: 'AnimeON' },
+                { id: 'bamboo', name: 'Bamboo' },
+                { id: 'mikai', name: 'Mikai' }
+            ];
+            callback(testBalancers);
+        }
+        
+        function createModalContent(movieData, balancers) {
             var html = '<div class="my-balancer-modal" style="padding: 20px;">' +
                       '<style>' +
                       '.my-balancer-list { margin: 15px 0; }' +
@@ -91,19 +95,10 @@
                       '.movie-info { margin-bottom: 20px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px; }' +
                       '</style>';
             
-            // Інформація про фільм
             html += '<div class="movie-info">' +
                    '<div><strong>' + (movieData.title || movieData.name || 'Невідомо') + '</strong></div>' +
                    (movieData.year ? '<div>Рік: ' + movieData.year + '</div>' : '') +
                    '</div>';
-            
-            // Список балансерів (тимчасово статичний)
-            var balancers = [
-                { id: 'bal1', name: 'Uaflix' },
-                { id: 'bal2', name: 'AnimeON' },
-                { id: 'bal3', name: 'Bamboo' },
-                { id: 'bal4', name: 'Mikai' }
-            ];
             
             html += '<div class="my-balancer-list">';
             balancers.forEach(function(b) {
@@ -111,16 +106,48 @@
             });
             html += '</div>';
             
-            // Фільтр "Нова серія"
             html += '<div class="my-filter-item">' +
                    '<input type="checkbox" id="new-episode" style="width: 20px; height: 20px;">' +
                    '<label for="new-episode" style="font-size: 16px;">Тільки нові серії</label>' +
                    '</div>';
             
-            // Кнопка відтворення
-            html += '<button class="my-play-btn" disabled onclick="alert(\'Вибрано: \' + (window.selectedBalancer || \'нічого\') + \', Нова серія: \' + document.getElementById(\'new-episode\').checked)">Дивитися</button>';
+            // Кнопка відтворення з викликом вашого API
+            html += '<button class="my-play-btn" disabled onclick="playWithBalancer(\'' + 
+                   JSON.stringify(movieData).replace(/'/g, "\\'") + '\')">Дивитися</button>';
             
             html += '</div>';
+            
+            // Додаємо глобальну функцію для відтворення
+            if (!window.playWithBalancer) {
+                window.playWithBalancer = function(movieDataStr) {
+                    var movieData = JSON.parse(movieDataStr);
+                    var balancerId = window.selectedBalancer;
+                    var newEpisode = document.getElementById('new-episode').checked;
+                    
+                    if (!balancerId) {
+                        alert('Оберіть балансер!');
+                        return;
+                    }
+                    
+                    // Тут буде запит до вашого API
+                    alert('Запит до API: ' + config.apiBase + '/search?balancer=' + balancerId + 
+                          '&movie=' + encodeURIComponent(movieData.title || movieData.name) +
+                          '&new=' + newEpisode);
+                    
+                    // Пізніше замінимо на реальний запит:
+                    /*
+                    fetch(config.apiBase + '/search?balancer=' + balancerId + 
+                          '&movie=' + encodeURIComponent(movieData.title || movieData.name) +
+                          '&new=' + newEpisode)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.url) {
+                                Lampa.Player.play({ url: data.url, title: movieData.title });
+                            }
+                        });
+                    */
+                };
+            }
             
             return html;
         }
