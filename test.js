@@ -1,22 +1,30 @@
 (function() {
     'use strict';
     
+    console.log('🚀 Остання спроба');
+    
     setTimeout(function() {
-        var container = $('.full-start__buttons, .full-start-new__buttons, .card__info, .info-block').first();
+        // Шукаємо елемент, який був підсвічений червоним
+        // (той самий селектор, що й у діагностичному плагіні)
+        var container = $('.full-start__buttons, .full-start-new__buttons, .card__info, .info-block, .card__content, .buttons-panel').first();
+        
+        console.log('Контейнер знайдено?', container.length);
         
         if (container.length) {
-            // Створюємо кнопку через raw DOM елемент
-            var div = document.createElement('div');
-            div.className = 'selector';
-            div.style.cssText = 'padding: 15px; background: #ff5722; color: white; text-align: center; margin: 5px; border-radius: 5px;';
-            div.innerHTML = '⚖️ КНОПКА';
+            // Додаємо кнопку найпростішим способом
+            var buttonHtml = '<div id="my-simple-button" style="padding: 15px; background: #ff5722; color: white; text-align: center; margin: 10px; border-radius: 5px; font-size: 18px; cursor: pointer;">⚖️ НАТИСНИ МЕНЕ</div>';
             
-            // Додаємо через raw JavaScript
-            div.onclick = function() {
+            container.append(buttonHtml);
+            
+            console.log('✅ Кнопку додано');
+            
+            // Додаємо обробник через делегування подій
+            $(document).on('click', '#my-simple-button', function() {
+                console.log('Кнопку натиснуто');
                 alert('Працює!');
-            };
-            
-            container[0].appendChild(div);
+            });
+        } else {
+            console.log('❌ Контейнер не знайдено');
         }
     }, 3000);
 })();
