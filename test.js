@@ -15,22 +15,34 @@
             '.card__info',
             '.card-content',
             '.info-block',
-            '.buttons-block'
+            '.buttons-block',
+            '.card__content',
+            '.info-panel',
+            '.button-panel'
         ];
+        
+        var found = false;
         
         selectors.forEach(function(selector) {
             var elements = $(selector);
-            console.log('Селектор "' + selector + '": знайдено ' + elements.length);
+            console.log('🔍 Селектор "' + selector + '": знайдено ' + elements.length);
             
             if (elements.length) {
                 // Підсвічуємо знайдений елемент червоною рамкою
                 elements.css('border', '3px solid red');
-                console.log('✅ Знайдено!', selector);
+                elements.css('background', 'rgba(255,0,0,0.1)');
+                console.log('✅ ЗНАЙДЕНО! Селектор: ' + selector);
+                console.log('📌 Кількість елементів: ' + elements.length);
+                console.log('📌 HTML знайденого:', elements[0].outerHTML);
+                found = true;
             }
         });
         
-        // Показуємо всю структуру сторінки
-        console.log('📄 Вміст сторінки:', $('body').html());
+        if (!found) {
+            console.log('❌ Жодного елемента не знайдено');
+            // Якщо нічого не знайдено, показуємо всю структуру
+            console.log('📄 Вміст сторінки:', $('body').html().substring(0, 500) + '...');
+        }
         
     }, 3000);
 })();
