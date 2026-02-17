@@ -32,34 +32,30 @@
                 var movie = data.movie;
                 var title = movie.title || movie.name;
 
-                // Створюємо стандартний об'єкт для компонента Online
-                var base_url = 'https://ashdi.vip/api/video?title=' + encodeURIComponent(title);
-                
+                // Використовуємо вбудований компонент 'online' для стандартного вигляду
                 Lampa.Activity.push({
                     title: 'Козак ТВ',
-                    component: 'online', // Використовуємо вбудований компонент
+                    component: 'online', 
                     movie: movie,
-                    url: api_proxy + encodeURIComponent(base_url),
-                    // Додаємо фільтри як у професійних плагінах
-                    filter: function(items) {
-                        return [
-                            {
-                                title: 'Балансер',
-                                items: [
-                                    {title: 'Ashdi (UA)', source: 'ashdi', selected: true},
-                                    {title: 'VideoCDN', source: 'vcdn'}
-                                ],
-                                onSelect: function(item) {
-                                    var new_base = item.source === 'ashdi' 
-                                        ? 'https://ashdi.vip/api/video?title=' 
-                                        : 'https://videocdn.tv/api/short?api_token=3i40v5i7z6CcU4SHe627S74y704mIu62&title=';
-                                    
-                                    // Оновлюємо посилання для пошуку
-                                    this.activity.url = api_proxy + encodeURIComponent(new_base + encodeURIComponent(title));
-                                    this.activity.component.create();
-                                }.bind(this)
-                            }
-                        ];
+                    url: api_proxy + encodeURIComponent('https://ashdi.vip/api/video?title=' + encodeURIComponent(title)),
+                    
+                    // Ця частина створює кнопку вибору балансера зверху сторінки
+                    onRender: function(object) {
+                        if (object.filter) {
+                            object.filter.set('source', [
+                                {title: 'Ashdi (UA)', source: 'ashdi', selected: true},
+                                {title: 'VideoCDN', source: 'vcdn'}
+                            ]);
+                            
+                            object.filter.onSelect = function(item) {
+                                var new_url = item.source === 'ashdi' 
+                                    ? 'https://ashdi.vip/api/video?title=' 
+                                    : 'https://videocdn.tv/api/short?api_token=3i40v5i7z6CcU4SHe627S74y704mIu62&title=';
+                                
+                                object.url = api_proxy + encodeURIComponent(new_url + encodeURIComponent(title));
+                                object.search(); // Перезапуск пошуку з новим балансером
+                            };
+                        }
                     }
                 });
             });
