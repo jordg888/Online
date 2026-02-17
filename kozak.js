@@ -2,8 +2,7 @@
     'use strict';
 
     function KozakTiv() {
-        var api_proxy = 'https://vercel-proxy-blue-six.vercel.app/api?url=';
-
+        // Спробуємо використати інший підхід до формування посилання
         this.init = function () {
             var _this = this;
             Lampa.Listener.follow('full', function (e) {
@@ -32,13 +31,14 @@
                 var movie = data.movie;
                 var title = movie.title || movie.name;
 
+                // Використовуємо системний компонент Online
                 Lampa.Activity.push({
                     title: 'Козак ТВ',
                     component: 'online', 
                     movie: movie,
                     page: 1,
-                    // Початкове посилання (Ashdi)
-                    url: api_proxy + encodeURIComponent('https://ashdi.vip/api/video?title=' + encodeURIComponent(title))
+                    // Ми міняємо структуру запиту, щоб Lampa сама намагалася його "проштовхнути"
+                    url: 'https://vercel-proxy-blue-six.vercel.app/api?url=' + encodeURIComponent('https://ashdi.vip/api/video?title=' + encodeURIComponent(title))
                 });
             });
         };
