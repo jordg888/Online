@@ -1,48 +1,32 @@
 (function() {
     'use strict';
     
-    console.log('🔍 ДІАГНОСТИКА: початок');
+    console.log('🚀 Простий плагін');
     
+    // Чекаємо 3 секунди і додаємо кнопку
     setTimeout(function() {
-        console.log('🔍 Шукаємо елементи...');
+        console.log('Додаємо кнопку...');
         
-        // Перевіряємо всі можливі контейнери
-        var selectors = [
-            '.full-start__buttons',
-            '.full-start-new__buttons', 
-            '.card__buttons',
-            '.card__actions',
-            '.card__info',
-            '.card-content',
-            '.info-block',
-            '.buttons-block',
-            '.card__content',
-            '.info-panel',
-            '.button-panel'
-        ];
+        // Шукаємо контейнер з кнопками (який був підсвічений червоним)
+        var container = $('.full-start__buttons, .full-start-new__buttons, .card__info, .info-block').first();
         
-        var found = false;
-        
-        selectors.forEach(function(selector) {
-            var elements = $(selector);
-            console.log('🔍 Селектор "' + selector + '": знайдено ' + elements.length);
+        if (container.length) {
+            console.log('✅ Контейнер знайдено');
             
-            if (elements.length) {
-                // Підсвічуємо знайдений елемент червоною рамкою
-                elements.css('border', '3px solid red');
-                elements.css('background', 'rgba(255,0,0,0.1)');
-                console.log('✅ ЗНАЙДЕНО! Селектор: ' + selector);
-                console.log('📌 Кількість елементів: ' + elements.length);
-                console.log('📌 HTML знайденого:', elements[0].outerHTML);
-                found = true;
-            }
-        });
-        
-        if (!found) {
-            console.log('❌ Жодного елемента не знайдено');
-            // Якщо нічого не знайдено, показуємо всю структуру
-            console.log('📄 Вміст сторінки:', $('body').html().substring(0, 500) + '...');
+            // Створюємо кнопку
+            var button = $('<div class="selector" style="display: inline-block; margin: 5px; padding: 10px 15px; background: #ff5722; color: white; border-radius: 5px; font-size: 16px;">⚖️ БАЛАНСЕР</div>');
+            
+            // Додаємо в контейнер
+            container.append(button);
+            
+            // Обробник кліку
+            button.on('click', function() {
+                alert('Кнопка працює!');
+            });
+            
+            console.log('✅ Кнопку додано');
+        } else {
+            console.log('❌ Контейнер не знайдено');
         }
-        
     }, 3000);
 })();
