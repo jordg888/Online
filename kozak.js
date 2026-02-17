@@ -32,31 +32,13 @@
                 var movie = data.movie;
                 var title = movie.title || movie.name;
 
-                // Використовуємо вбудований компонент 'online' для стандартного вигляду
                 Lampa.Activity.push({
                     title: 'Козак ТВ',
                     component: 'online', 
                     movie: movie,
-                    url: api_proxy + encodeURIComponent('https://ashdi.vip/api/video?title=' + encodeURIComponent(title)),
-                    
-                    // Ця частина створює кнопку вибору балансера зверху сторінки
-                    onRender: function(object) {
-                        if (object.filter) {
-                            object.filter.set('source', [
-                                {title: 'Ashdi (UA)', source: 'ashdi', selected: true},
-                                {title: 'VideoCDN', source: 'vcdn'}
-                            ]);
-                            
-                            object.filter.onSelect = function(item) {
-                                var new_url = item.source === 'ashdi' 
-                                    ? 'https://ashdi.vip/api/video?title=' 
-                                    : 'https://videocdn.tv/api/short?api_token=3i40v5i7z6CcU4SHe627S74y704mIu62&title=';
-                                
-                                object.url = api_proxy + encodeURIComponent(new_url + encodeURIComponent(title));
-                                object.search(); // Перезапуск пошуку з новим балансером
-                            };
-                        }
-                    }
+                    page: 1,
+                    // Початкове посилання (Ashdi)
+                    url: api_proxy + encodeURIComponent('https://ashdi.vip/api/video?title=' + encodeURIComponent(title))
                 });
             });
         };
