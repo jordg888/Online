@@ -14,4 +14,13 @@
                         onSelect: function(item){
                             Lampa.Player.play({
                                 title: item.title,
-                               
+                                url: item.url
+                            });
+                        }
+                    });
+                    Lampa.Select.open(menu);
+                }
+            });
+        }
+    });
+})();
