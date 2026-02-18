@@ -1,53 +1,26 @@
 (function() {
     'use strict';
-
-    var PLUGIN_KEY = 'my_balancer';
-    var PLUGIN_NAME = 'My Balancer';
-
-    // ==================== ТІЛЬКИ ДЖЕРЕЛО ====================
-    if (window.Lampa && Lampa.Provider) {
-        Lampa.Provider.add({
-            name: PLUGIN_KEY,
-            title: PLUGIN_NAME,
-            create: function() {
-                return function(component, object) {
-                    this.search = function() {
-                        component.draw([
-                            {title: 'Uaflix', info: 'Балансер'},
-                            {title: 'AnimeON', info: 'Балансер'},
-                            {title: 'Bamboo', info: 'Балансер'}
-                        ], {
-                            onEnter: function(item) {
-                                alert('Вибрано: ' + item.title);
-                            }
-                        });
-                    };
-                };
-            }
-        });
-    }
-
-    // ==================== ТІЛЬКИ КНОПКА ====================
+    
+    console.log('🚀 СУПЕР ПРОСТА КНОПКА');
+    
+    // Чекаємо 3 секунди
     setTimeout(function() {
-        setInterval(function() {
-            var container = $('.full-start__buttons').first();
-            if (container.length && !$('.my-source-btn').length) {
-                var button = $('<div class="full-start__button selector my-source-btn">' +
-                               '<div>⚖️</div>' +
-                               '<span>Balancer</span>' +
-                               '</div>');
-                container.append(button);
-                
-                button.on('click', function() {
-                    var page = Lampa.Page.current();
-                    if (page && page.data) {
-                        Lampa.Page.open('source', {
-                            source: PLUGIN_KEY,
-                            movie: page.data.movie || page.data
-                        });
-                    }
-                });
-            }
-        }, 1000);
-    }, 2000);
+        
+        // Створюємо кнопку прямо в body зверху
+        var button = document.createElement('div');
+        button.id = 'super-simple-button';
+        button.innerHTML = '⚖️ НАТИСНИ МЕНЕ';
+        button.style.cssText = 'position: fixed; top: 100px; left: 50%; transform: translateX(-50%); z-index: 99999; background: #ff5722; color: white; padding: 20px 40px; border-radius: 30px; font-size: 24px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.5);';
+        
+        // Додаємо на сторінку
+        document.body.appendChild(button);
+        
+        // Додаємо обробник
+        button.onclick = function() {
+            alert('ПРАЦЮЄ!');
+        };
+        
+        console.log('✅ Кнопку додано в body');
+        
+    }, 3000);
 })();
