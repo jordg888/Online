@@ -3,7 +3,8 @@
 
     function KozakTiv() {
         var _this = this;
-        var network = new Lampa.Reguest();
+        // Використовуємо стабільний шлюз для отримання списку джерел
+        var gateway = 'http://golampaua.mooo.com/lite/withsearch';
 
         this.init = function () {
             Lampa.Listener.follow('full', function (e) {
@@ -21,9 +22,15 @@
         };
 
         this.render = function (data, html) {
-            var button = $('<div class="full-start__button selector lampa-kozak-button" style="border: 2px solid #ffde1a !important;"><span style="font-weight: bold;">КОЗАК ТВ</span></div>');
-            button.on('hover:enter click', function() { _this.open(data.movie); });
-            $(html).find('.full-start-new__buttons, .full-start__buttons').append(button);
+            var button = $('<div class="full-start__button selector lampa-kozak-button" style="border: 2px solid #ffde1a !important; background: rgba(255, 222, 26, 0.2) !important;"><span style="font-weight: bold; color: #fff;">КОЗАК ТВ</span></div>');
+            
+            button.on('hover:enter click', function() {
+                _this.open(data.movie);
+            });
+
+            var container = $(html).find('.full-start-new__buttons, .full-start__buttons');
+            if (container.find('.lampa-kozak-button').length) return;
+            container.append(button);
         };
 
         this.open = function (movie) {
@@ -33,45 +40,50 @@
                 movie: movie,
                 page: 1,
                 onRender: function(object) {
-                    // ПРИМУСОВО МАЛЮЄМО ФІЛЬТРИ ОДРАЗУ
-                    var filter_data = {
+                    // ФІЛЬТРИ: Беремо логіку з твого нового плагіна
+                    var filter_items = {
                         source: [
                             {title: 'Ashdi (UA)', source: 'ashdi', selected: true},
-                            {title: 'VideoCDN', source: 'vcdn'}
+                            {title: 'VideoCDN', source: 'vcdn'},
+                            {title: 'Rezka', source: 'rezka'},
+                            {title: 'KinoBase', source: 'kinobase'}
                         ]
                     };
 
-                    // Встановлюємо фільтри в інтерфейс
-                    object.filter.set(filter_data);
+                    object.filter.set(filter_items);
 
-                    // Функція обробки вибору
                     object.filter.onSelect = function(type, item) {
-                        if(type === 'source') {
-                            _this.startSearch(object, movie, item.source);
+                        if (type === 'source') {
+                            _this.search(object, movie, item.source);
                         }
                     };
 
-                    // Запускаємо пошук для джерела за замовчуванням
-                    _this.startSearch(object, movie, 'ashdi');
+                    // Перший запуск
+                    _this.search(object, movie, 'ashdi');
                 }
             });
         };
 
-        this.startSearch = function(object, movie, source) {
+        this.search = function (object, movie, balanser) {
             object.loading(true);
-            object.draw([]); // Очищуємо попередні результати
-
-            var base = source === 'ashdi' 
-                ? 'https://ashdi.vip/api/video?title=' 
-                : 'https://videocdn.tv/api/short?api_token=3i40v5i7z6CcU4SHe627S74y704mIu62&title=';
             
-            var url = 'https://corsproxy.io/?' + encodeURIComponent(base + encodeURIComponent(movie.title || movie.name));
+            // Використовуємо метод формування запиту як у Lampac
+            var query = 'id=' + movie.id + 
+                        '&title=' + encodeURIComponent(movie.title || movie.name) + 
+                        '&serial=' + (movie.number_of_seasons ? 1 : 0);
+
+            // Пряме звернення до балансера через проксі-шлюз
+            var url = 'https://corsproxy.io/?' + encodeURIComponent('https://' + balanser + '.vip/api/video?' + query);
+            
+            // Якщо VideoCDN, змінюємо шлях
+            if (balanser === 'vcdn') {
+                url = 'https://corsproxy.io/?' + encodeURIComponent('https://videocdn.tv/api/short?api_token=3i40v5i7z6CcU4SHe627S74y704mIu62&' + query);
+            }
 
             $.ajax({
                 url: url,
                 method: 'GET',
                 dataType: 'json',
-                timeout: 10000, // Чекаємо до 10 секунд (як у check.sh)
                 success: function(res) {
                     var data = res.data || res;
                     if (data && data.length) {
@@ -80,7 +92,7 @@
                                 title: i.title || movie.title,
                                 file: i.file || i.iframe_src || i.url,
                                 quality: i.quality || 'HD',
-                                info: source.toUpperCase()
+                                info: balanser.toUpperCase()
                             };
                         });
                         object.draw(items, {
