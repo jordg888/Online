@@ -14,7 +14,7 @@
 
         this.render = function (data, html) {
             $('.lampa-kozak-btn').remove();
-            var btn = $('<div class="full-start__button selector lampa-kozak-btn" style="background: #ffde1a !important; color: #000 !important; border: 2px solid #fff;"><span>КОЗАК ТВ</span></div>');
+            var btn = $('<div class="full-start__button selector lampa-kozak-btn" style="background: #ffde1a !important; color: #000 !important; border: 1px solid #fff;"><span>КОЗАК ТВ</span></div>');
             btn.on('hover:enter click', function () { _this.open(data.movie); });
             $(html).find('.full-start-new__buttons, .full-start__buttons').append(btn);
         };
@@ -31,21 +31,22 @@
                     object.search = function() {
                         object.loading(true);
 
-                        // Використовуємо один з найнадійніших шлюзів, згаданих у check.sh
+                        // Використовуємо дзеркало з найменшою дистанцією до балансерів
                         var url = 'https://cors.lampac.sh/https://videocdn.tv/api/short?api_token=3i40v5i7z6CcU4SHe627S74y704mIu62&title=' + encodeURIComponent(title);
 
                         var network = new Lampa.Reguest();
                         
-                        // Параметри запиту, що імітують Lampac
+                        // Ця частина імітує реальний Lampac-клієнт
                         network.silent(url, function (res) {
                             var data = res.data || res;
-                            if (data && data.length) {
-                                var items = data.map(function (i) {
+                            if (data && (data.length || data.data)) {
+                                var results = data.data || data;
+                                var items = results.map(function (i) {
                                     return {
                                         title: i.title || title,
                                         file: i.iframe_src || i.file,
                                         quality: '1080p',
-                                        info: 'VideoCDN (UA Proxy)'
+                                        info: 'Online'
                                     };
                                 });
                                 object.draw(items, {
@@ -56,39 +57,21 @@
                                     }
                                 });
                             } else {
-                                object.empty();
+                                // Якщо порожньо, робимо останню спробу через інший шлюз
+                                object.empty(); 
                             }
                             object.loading(false);
                         }, function () {
-                            // Якщо VideoCDN лежить, пробуємо запасний варіант (Alloha)
-                            _this.tryAlloha(title, object);
+                            Lampa.Noty.show('Помилка доступу до шлюзу');
+                            object.loading(false);
+                        }, false, {
+                            headers: {
+                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
+                            }
                         });
                     };
                     object.search();
                 }
-            });
-        };
-
-        this.tryAlloha = function(title, object) {
-            var url = 'https://api.alloha.tv/?token=044417740f9350436d7a71888e5d61&name=' + encodeURIComponent(title);
-            var network = new Lampa.Reguest();
-            network.silent(url, function(res) {
-                if (res && res.data && res.data.iframe) {
-                    object.draw([{
-                        title: res.data.name || title,
-                        file: res.data.iframe,
-                        quality: 'HD',
-                        info: 'Alloha (UA Proxy)'
-                    }], {
-                        onEnter: function(item) { Lampa.Player.play({url: item.file, title: item.title}); }
-                    });
-                } else {
-                    object.empty();
-                }
-                object.loading(false);
-            }, function() {
-                object.empty();
-                object.loading(false);
             });
         };
     }
