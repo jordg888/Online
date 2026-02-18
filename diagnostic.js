@@ -1,36 +1,41 @@
 (function() {
     'use strict';
     
-    console.log('🔍 ДІАГНОСТИКА ЗАПУЩЕНА');
+    console.log('🔍 ДІАГНОСТИКА: Плагін завантажено');
     
-    // Чекаємо 3 секунди і шукаємо кнопки
+    // Чекаємо 5 секунд поки завантажиться сторінка
     setTimeout(function() {
-        console.log('🔍 Починаємо пошук...');
+        console.log('🔍 Починаємо пошук елементів...');
         
-        // Шукаємо всі можливі кнопки
+        // Масив селекторів для пошуку
         var selectors = [
+            '.full-start__buttons',
             '.full-start__button',
             '.selector',
             '[class*="button"]',
-            '.online-btn',
-            '.watch-btn'
+            '.card__buttons',
+            '.online-btn'
         ];
         
+        // Перевіряємо кожен селектор
         for (var i = 0; i < selectors.length; i++) {
             var elements = $(selectors[i]);
-            console.log('Селектор ' + selectors[i] + ': знайдено ' + elements.length);
+            console.log('🔍 Селектор "' + selectors[i] + '" знайдено: ' + elements.length);
             
-            if (elements.length) {
-                elements.each(function(index) {
-                    var text = $(this).text().trim().substring(0, 30);
-                    if (text) {
-                        console.log('  → Кнопка: "' + text + '"');
-                    }
-                });
+            // Якщо знайшли елементи - виводимо їх
+            if (elements.length > 0) {
+                for (var j = 0; j < elements.length; j++) {
+                    var html = elements[j].outerHTML;
+                    console.log('  Елемент ' + j + ': ' + html.substring(0, 100) + '...');
+                }
             }
         }
         
-        console.log('🔍 ПОШУК ЗАВЕРШЕНО');
+        // Шукаємо кнопку з текстом "Онлайн"
+        var onlineBtn = $('.selector:contains("Онлайн")');
+        console.log('🔍 Кнопка "Онлайн" знайдена: ' + onlineBtn.length);
+        
+        console.log('🔍 ДІАГНОСТИКА ЗАВЕРШЕНА');
         
     }, 5000);
 })();
