@@ -3,7 +3,7 @@
         if(e.type === 'build' && e.card){
             e.card.addAction({
                 name: 'Балансери',
-                icon: 'menu',
+                icon: 'menu', // системна іконка
                 onSelect: function(){
                     var menu = Lampa.Select.create({
                         title: 'Виберіть балансер',
@@ -14,13 +14,4 @@
                         onSelect: function(item){
                             Lampa.Player.play({
                                 title: item.title,
-                                url: item.url
-                            });
-                        }
-                    });
-                    Lampa.Select.open(menu);
-                }
-            });
-        }
-    });
-})();
+                               
