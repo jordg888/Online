@@ -21,46 +21,29 @@
 
         this.search = function (movie) {
             var title = movie.title || movie.name;
-            var original = movie.original_title || movie.original_name || title;
+            Lampa.Noty.show('З’єднуємося через резервний шлюз...');
+
+            // Використовуємо пряме посилання на плеєр-балансер (Voidboost/Rezka)
+            // Це джерело найменше блокується в Україні
+            var video_url = 'https://voidboost.net/embed/movie?title=' + encodeURIComponent(title);
             
-            Lampa.Noty.show('Шукаємо на Rezka та Alloha...');
-
-            // Використовуємо комбінований пошук (Українська + Англійська назви)
-            var url = 'https://cors.lampac.sh/https://api.alloha.tv/?token=044417740f9350436d7a71888e5d61&name=' + encodeURIComponent(title) + '&origname=' + encodeURIComponent(original);
-
-            var network = new Lampa.Reguest();
-            network.silent(url, function (res) {
-                if (res && res.data && res.data.iframe) {
-                    var video = res.data.iframe;
-                    if (video.indexOf('//') === 0) video = 'https:' + video;
-                    
-                    Lampa.Player.play({
-                        url: video,
-                        title: res.data.name || title
-                    });
-                } else {
-                    // Якщо Alloha мовчить, пробуємо Rezka через інший шлюз
-                    _this.tryRezka(title, original);
-                }
-            }, function () {
-                _this.tryRezka(title, original);
+            // Замість складних перевірок, ми одразу кажемо Лампі: "Грай це"
+            // Внутрішній плеєр сам спробує "пробити" шлях
+            Lampa.Player.play({
+                url: video_url,
+                title: title
             });
-        };
 
-        this.tryRezka = function(title, original) {
-            // Спроба через Rezka (найпопулярніше в UA)
-            var rezka_url = 'https://cors.lampac.sh/https://voidboost.net/embed/movie?title=' + encodeURIComponent(title);
-            var network = new Lampa.Reguest();
-            network.silent(rezka_url, function(res) {
-                // Rezka часто повертає просто iframe, тому перевіряємо наявність тексту
-                if (res && res.indexOf('iframe') > -1) {
-                    Lampa.Player.play({ url: rezka_url, title: title });
-                } else {
-                    Lampa.Noty.show('Фільм не знайдено в жодній базі');
-                }
-            }, function() {
-                Lampa.Noty.show('Помилка мережі. Перевірте проксі у Лампі.');
-            });
+            // Паралельно перевіряємо Alloha через інший проксі, якщо Rezka не піде
+            setTimeout(function() {
+                var alt_url = 'https://api.alloha.tv/?token=044417740f9350436d7a71888e5d61&name=' + encodeURIComponent(title);
+                var network = new Lampa.Reguest();
+                network.silent(alt_url, function(res) {
+                    if (res && res.data && res.data.iframe) {
+                        Lampa.Noty.show('Знайдено додаткове джерело!');
+                    }
+                });
+            }, 2000);
         };
     }
 
