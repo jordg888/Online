@@ -1,18 +1,26 @@
 (function() {
     'use strict';
     
+    console.log('🔍 ПОШУК КНОПОК');
+    
     setTimeout(function() {
-        // Шукаємо всі символи з кнопками
-        var symbols = document.getElementsByTagName('symbol');
+        // Шукаємо всі символи
+        var symbols = document.querySelectorAll('symbol');
+        console.log('Знайдено символів:', symbols.length);
         
-        for(var i = 0; i < symbols.length; i++) {
-            console.log('Symbol ' + i + ': ' + symbols[i].id);
+        for (var i = 0; i < symbols.length; i++) {
+            console.log('Символ ' + i + ': id=' + symbols[i].id);
             
-            // Якщо знайшли символ feed - аналізуємо його
-            if(symbols[i].id == 'sprite-feed') {
-                var content = symbols[i].innerHTML;
-                console.log('Feed content:', content);
+            // Шукаємо кнопки всередині символів
+            var paths = symbols[i].querySelectorAll('path');
+            if (paths.length) {
+                console.log('  → має ' + paths.length + ' path елементів');
             }
         }
+        
+        // Шукаємо будь-які елементи з текстом
+        var allElements = document.querySelectorAll('[class*="button"], [class*="btn"], .selector');
+        console.log('Елементи з button/btn/selector:', allElements.length);
+        
     }, 5000);
 })();
