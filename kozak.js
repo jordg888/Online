@@ -14,7 +14,7 @@
 
         this.render = function (data, html) {
             $('.lampa-kozak-btn').remove();
-            var btn = $('<div class="full-start__button selector lampa-kozak-btn" style="background: #ffde1a !important; color: #000 !important;"><span>КОЗАК ТВ</span></div>');
+            var btn = $('<div class="full-start__button selector lampa-kozak-btn" style="background: #ffde1a !important; color: #000 !important; border-radius: 5px;"><span>КОЗАК ТВ</span></div>');
             
             btn.on('hover:enter click', function () {
                 _this.search(data.movie);
@@ -25,46 +25,49 @@
 
         this.search = function (movie) {
             var title = movie.title || movie.name;
-            // Використовуємо дзеркала, які перевіряє ваш скрипт check.sh
-            var url = 'https://corsproxy.io/?' + encodeURIComponent('https://videocdn.tv/api/short?api_token=3i40v5i7z6CcU4SHe627S74y704mIu62&title=' + title);
+            // Використовуємо універсальний шлюз, який часто прописаний в check.sh
+            var url = 'https://cors.lampac.sh/https://videocdn.tv/api/short?api_token=3i40v5i7z6CcU4SHe627S74y704mIu62&title=' + encodeURIComponent(title);
 
             Lampa.Select.show({
                 title: 'Пошук: ' + title,
-                items: [{title: 'Зачекайте, шукаємо в базах...', any: true}],
+                items: [{title: 'Шукаємо джерела...', any: true}],
                 onSelect: function() {},
                 onBack: function() { Lampa.Controller.toggle('content'); }
             });
 
-            $.ajax({
-                url: url,
-                method: 'GET',
-                success: function (res) {
-                    var items = [];
-                    var data = res.data || res;
+            // Використовуємо вбудований метод Lampa для запитів, він краще обходить CORS
+            var network = new Lampa.Reguest();
+            network.silent(url, function (res) {
+                var items = [];
+                var data = res.data || res;
 
-                    if (data && data.length) {
-                        data.forEach(function (i) {
-                            items.push({
-                                title: i.title || title,
-                                subtitle: i.quality || '1080p',
-                                file: i.iframe_src || i.file
-                            });
+                if (data && data.length) {
+                    data.forEach(function (i) {
+                        items.push({
+                            title: i.title || title,
+                            subtitle: 'Якість: ' + (i.quality || '1080p'),
+                            file: i.iframe_src || i.file
                         });
+                    });
 
-                        Lampa.Select.show({
-                            title: 'Результати Козак ТВ',
-                            items: items,
-                            onSelect: function (item) {
-                                Lampa.Player.play({ url: item.file, title: item.title });
-                            }
-                        });
-                    } else {
-                        Lampa.Noty.show('Нічого не знайдено на VideoCDN');
-                    }
-                },
-                error: function () {
-                    Lampa.Noty.show('Помилка з’єднання з сервером');
+                    Lampa.Select.show({
+                        title: 'Знайдено на Козак ТВ',
+                        items: items,
+                        onSelect: function (item) {
+                            // Перевіряємо протокол посилання
+                            var video_url = item.file;
+                            if (video_url.indexOf('//') === 0) video_url = 'https:' + video_url;
+                            
+                            Lampa.Player.play({ url: video_url, title: item.title });
+                        }
+                    });
+                } else {
+                    Lampa.Noty.show('Бази порожні для цього фільму');
+                    Lampa.Select.close();
                 }
+            }, function () {
+                Lampa.Noty.show('Шлюз не відповідає. Спробуйте пізніше.');
+                Lampa.Select.close();
             });
         };
     }
