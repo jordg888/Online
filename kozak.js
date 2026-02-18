@@ -14,65 +14,72 @@
 
         this.render = function (data, html) {
             $('.lampa-kozak-btn').remove();
-            var btn = $('<div class="full-start__button selector lampa-kozak-btn" style="background: #ffde1a !important; color: #000 !important; border-radius: 5px;"><span>КОЗАК ТВ</span></div>');
-            
-            btn.on('hover:enter click', function () {
-                _this.search(data.movie);
-            });
-            
+            var btn = $('<div class="full-start__button selector lampa-kozak-btn" style="background: #ffde1a !important; color: #000 !important;"><span>КОЗАК ТВ</span></div>');
+            btn.on('hover:enter click', function () { _this.search(data.movie); });
             $(html).find('.full-start-new__buttons, .full-start__buttons').append(btn);
         };
 
         this.search = function (movie) {
             var title = movie.title || movie.name;
-            // Використовуємо універсальний шлюз, який часто прописаний в check.sh
-            var url = 'https://cors.lampac.sh/https://videocdn.tv/api/short?api_token=3i40v5i7z6CcU4SHe627S74y704mIu62&title=' + encodeURIComponent(title);
+            // Використовуємо Alloha - він часто працює без додаткових шлюзів
+            var url = 'https://api.alloha.tv/?token=044417740f9350436d7a71888e5d61&name=' + encodeURIComponent(title);
 
             Lampa.Select.show({
                 title: 'Пошук: ' + title,
-                items: [{title: 'Шукаємо джерела...', any: true}],
+                items: [{title: 'З'єднуємося з базою...', any: true}],
                 onSelect: function() {},
                 onBack: function() { Lampa.Controller.toggle('content'); }
             });
 
-            // Використовуємо вбудований метод Lampa для запитів, він краще обходить CORS
             var network = new Lampa.Reguest();
             network.silent(url, function (res) {
-                var items = [];
-                var data = res.data || res;
-
-                if (data && data.length) {
-                    data.forEach(function (i) {
-                        items.push({
-                            title: i.title || title,
-                            subtitle: 'Якість: ' + (i.quality || '1080p'),
-                            file: i.iframe_src || i.file
-                        });
-                    });
+                if (res && res.data && res.data.iframe) {
+                    var items = [{
+                        title: res.data.name || title,
+                        subtitle: 'Знав за назвою (ALLOHA)',
+                        file: res.data.iframe
+                    }];
 
                     Lampa.Select.show({
-                        title: 'Знайдено на Козак ТВ',
+                        title: 'Результати знайдено',
                         items: items,
                         onSelect: function (item) {
-                            // Перевіряємо протокол посилання
-                            var video_url = item.file;
-                            if (video_url.indexOf('//') === 0) video_url = 'https:' + video_url;
-                            
-                            Lampa.Player.play({ url: video_url, title: item.title });
+                            var video = item.file;
+                            if (video.indexOf('//') === 0) video = 'https:' + video;
+                            Lampa.Player.play({ url: video, title: item.title });
                         }
                     });
                 } else {
-                    Lampa.Noty.show('Бази порожні для цього фільму');
+                    Lampa.Noty.show('База Alloha не знайшла цей фільм');
                     Lampa.Select.close();
                 }
             }, function () {
-                Lampa.Noty.show('Шлюз не відповідає. Спробуйте пізніше.');
+                // Якщо і це не працює - пробуємо останній шанс через інший проксі
+                _this.tryBackup(title);
+            });
+        };
+
+        this.tryBackup = function(title) {
+            var backup_url = 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent('https://videocdn.tv/api/short?api_token=3i40v5i7z6CcU4SHe627S74y704mIu62&title=' + title);
+            var network = new Lampa.Reguest();
+            network.silent(backup_url, function(res) {
+                var data = res.data || res;
+                if (data && data.length) {
+                    Lampa.Select.show({
+                        title: 'Резервний канал',
+                        items: data.map(function(i){ return {title: i.title, file: i.iframe_src, subtitle: 'VideoCDN'}; }),
+                        onSelect: function(item) { Lampa.Player.play({url: item.file, title: item.title}); }
+                    });
+                } else {
+                    Lampa.Noty.show('Всі шлюзи заблоковані провайдером');
+                    Lampa.Select.close();
+                }
+            }, function() {
+                Lampa.Noty.show('Повна блокада мережі');
                 Lampa.Select.close();
             });
         };
     }
 
-    if (window.Lampa) {
-        new KozakTiv().init();
-    }
+    if (window.Lampa) new KozakTiv().init();
 })();
