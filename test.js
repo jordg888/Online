@@ -1,7 +1,6 @@
 (function(){
     Lampa.Listener.follow('full', function(e){
         if(e.type === 'build' && e.card){
-            // додаємо системну кнопку
             e.card.addAction({
                 name: 'Балансери',
                 icon: 'menu', // системна іконка
