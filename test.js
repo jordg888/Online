@@ -1,26 +1,31 @@
 (function() {
     'use strict';
     
-    console.log('🚀 СУПЕР ПРОСТА КНОПКА');
+    console.log('🎯 Кнопка в картці');
     
     // Чекаємо 3 секунди
     setTimeout(function() {
         
-        // Створюємо кнопку прямо в body зверху
-        var button = document.createElement('div');
-        button.id = 'super-simple-button';
-        button.innerHTML = '⚖️ НАТИСНИ МЕНЕ';
-        button.style.cssText = 'position: fixed; top: 100px; left: 50%; transform: translateX(-50%); z-index: 99999; background: #ff5722; color: white; padding: 20px 40px; border-radius: 30px; font-size: 24px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.5);';
+        // Шукаємо картку фільму
+        var card = $('.card').first();
         
-        // Додаємо на сторінку
-        document.body.appendChild(button);
-        
-        // Додаємо обробник
-        button.onclick = function() {
-            alert('ПРАЦЮЄ!');
-        };
-        
-        console.log('✅ Кнопку додано в body');
+        if (card.length) {
+            // Створюємо кнопку
+            var button = document.createElement('div');
+            button.innerHTML = '⚖️ БАЛАНСЕР';
+            button.style.cssText = 'margin: 20px; padding: 20px; background: #ff5722; color: white; text-align: center; border-radius: 10px; font-size: 20px;';
+            
+            // Додаємо на початок картки
+            card[0].insertBefore(button, card[0].firstChild);
+            
+            button.onclick = function() {
+                alert('Кнопка в картці працює!');
+            };
+            
+            console.log('✅ Кнопку додано в картку');
+        } else {
+            console.log('❌ Картку не знайдено');
+        }
         
     }, 3000);
 })();
