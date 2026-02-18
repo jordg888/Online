@@ -3,8 +3,8 @@
         if(e.type === 'build' && e.card){
             // створюємо кнопку
             var btn = $('<div class="selector">Балансери</div>');
-            
-            // додаємо в блок кнопок картки
+
+            // додаємо у блок кнопок картки
             e.card.find('.full-start').append(btn);
 
             // реакція на натискання
