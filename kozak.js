@@ -1,8 +1,6 @@
 (function () {
     'use strict';
 
-    var hostkey = 'golampaua.mooo.com';
-
     function KozakTiv() {
         var _this = this;
 
@@ -16,60 +14,58 @@
 
         this.render = function (data, html) {
             $('.lampa-kozak-btn').remove();
-            var btn = $('<div class="full-start__button selector lampa-kozak-btn" style="background: #ffde1a !important; color: #000 !important; border-radius: 5px;"><span>КОЗАК ТВ</span></div>');
-            btn.on('hover:enter click', function () { _this.search(data.movie); });
+            var btn = $('<div class="full-start__button selector lampa-kozak-btn" style="background: #ffde1a !important; color: #000 !important; border: 1px solid #fff;"><span>КОЗАК ТВ</span></div>');
+            btn.on('hover:enter click', function () { _this.open(data.movie); });
             $(html).find('.full-start-new__buttons, .full-start__buttons').append(btn);
         };
 
-        this.search = function (movie) {
+        this.open = function (movie) {
             var title = movie.title || movie.name;
             
-            // Показуємо вікно очікування
-            Lampa.Select.show({
-                title: 'Пошук: ' + title,
-                items: [{title: 'Встановлення захищеного з’єднання...', any: true}],
-                onSelect: function() {},
-                onBack: function() { Lampa.Controller.toggle('content'); }
-            });
+            Lampa.Activity.push({
+                title: 'Козак ТВ',
+                component: 'online', // Використовуємо системний компонент, але з нашим тунелем
+                movie: movie,
+                page: 1,
+                onRender: function(object) {
+                    object.search = function() {
+                        object.loading(true);
+                        
+                        // Параметри запиту до робочого шлюзу з твого прикладу
+                        var url = 'http://golampaua.mooo.com/lite/online';
+                        var query = '?id=' + movie.id + '&title=' + encodeURIComponent(title) + '&year=' + (movie.release_date || '').slice(0,4);
 
-            // Використовуємо шлях з твого робочого плагіна
-            var url = 'http://' + hostkey + '/lite/online?id=' + movie.id + 
-                      '&title=' + encodeURIComponent(title) + 
-                      '&original_title=' + encodeURIComponent(movie.original_title || '') +
-                      '&year=' + (movie.release_date || '').slice(0,4);
-
-            var network = new Lampa.Reguest();
-            
-            // Спеціальний заголовок для імітації Lampac-клієнта
-            var headers = {
-                'X-Kit-AesGcm': Lampa.Storage.get('aesgcmkey', '')
-            };
-
-            network.silent(url, function (res) {
-                if (res && res.length) {
-                    var items = res.map(function (i) {
-                        return {
-                            title: i.name || i.title || title,
-                            subtitle: i.quality || 'HD (UA/RU)',
-                            file: i.url || i.video || i.file
-                        };
-                    });
-
-                    Lampa.Select.show({
-                        title: 'Знайдено в мережі Козак ТВ',
-                        items: items,
-                        onSelect: function (item) {
-                            Lampa.Player.play({ url: item.file, title: item.title });
-                        }
-                    });
-                } else {
-                    Lampa.Noty.show('На жаль, у захищених базах нічого не знайдено');
-                    Lampa.Select.close();
+                        // Використовуємо NativeWsClient - це "бронебійний" метод
+                        Lampa.NativeWsClient.send('proxy', {
+                            url: url + query,
+                            method: 'GET'
+                        }, function(res) {
+                            if (res && res.length) {
+                                var items = res.map(function(i) {
+                                    return {
+                                        title: i.name || i.title || title,
+                                        file: i.url || i.video || i.file,
+                                        quality: i.quality || 'HD',
+                                        info: 'UA/INT'
+                                    };
+                                });
+                                object.draw(items, {
+                                    onEnter: function(item) {
+                                        Lampa.Player.play({url: item.file, title: item.title});
+                                    }
+                                });
+                            } else {
+                                object.empty();
+                            }
+                            object.loading(false);
+                        }, function() {
+                            Lampa.Noty.show('Тунель заблоковано. Увімкніть Proxy в налаштуваннях Лампи!');
+                            object.loading(false);
+                        });
+                    };
+                    object.search();
                 }
-            }, function () {
-                Lampa.Noty.show('Помилка тунелювання. Спробуйте ввімкнути Proxy в налаштуваннях.');
-                Lampa.Select.close();
-            }, false, {headers: headers});
+            });
         };
     }
 
