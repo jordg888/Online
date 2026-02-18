@@ -2,7 +2,7 @@
     'use strict';
 
     // ========== ВАШІ НАЛАШТУВАННЯ ==========
-    var API_URL = 'https://api-plug-lime.vercel.app/api';  // ваш Vercel API
+    var API_URL = 'https://api-plug-lime.vercel.app/api';
     var PLUGIN_NAME = 'My Balancer';
     var PLUGIN_KEY = 'my_balancer';
     // ========================================
@@ -20,22 +20,30 @@
 
             // ========== ОСНОВНА ЛОГІКА ==========
             this.search = function() {
-                var url = API_URL + '/search?title=' + encodeURIComponent(movie.title || '') +
-                         (movie.year ? '&year=' + movie.year : '') +
-                         (movie.imdb_id ? '&imdb_id=' + movie.imdb_id : '');
+                var url = API_URL + '/search?title=' + encodeURIComponent(movie.title || '');
+                
+                if (movie.year) {
+                    url = url + '&year=' + movie.year;
+                }
+                if (movie.imdb_id) {
+                    url = url + '&imdb_id=' + movie.imdb_id;
+                }
 
                 network.silent(url, function(json) {
                     if (json && json.results && json.results.length) {
-                        // Показуємо список балансерів
-                        component.draw(json.results.map(function(item) {
-                            return {
+                        var items = [];
+                        for (var i = 0; i < json.results.length; i++) {
+                            var item = json.results[i];
+                            items.push({
                                 id: item.id,
                                 title: item.name,
                                 info: 'Балансер',
                                 year: movie.year,
                                 data: item
-                            };
-                        }), {
+                            });
+                        }
+                        
+                        component.draw(items, {
                             onEnter: function(item) {
                                 getVideo(item.id, movie);
                             }
@@ -50,8 +58,11 @@
 
             function getVideo(balancerId, movieData) {
                 var url = API_URL + '/video?balancer=' + balancerId +
-                         '&title=' + encodeURIComponent(movieData.title || '') +
-                         (movieData.year ? '&year=' + movieData.year : '');
+                         '&title=' + encodeURIComponent(movieData.title || '');
+                
+                if (movieData.year) {
+                    url = url + '&year=' + movieData.year;
+                }
 
                 network.silent(url, function(json) {
                     if (json && json.url) {
@@ -110,7 +121,7 @@
         Lampa.Provider.add({
             name: PLUGIN_KEY,
             title: PLUGIN_NAME,
-            create: createPlugin()
+            create: createPlugin
         });
         console.log('✅ Джерело зареєстровано');
     }
