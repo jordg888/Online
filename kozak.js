@@ -3,8 +3,8 @@
 
     function KozakTiv() {
         var _this = this;
-        // Використовуємо стабільний шлюз для отримання списку джерел
-        var gateway = 'http://golampaua.mooo.com/lite/withsearch';
+        // Твоя адреса на Vercel
+        var api_host = 'https://host-vercel-theta.vercel.app/api/online';
 
         this.init = function () {
             Lampa.Listener.follow('full', function (e) {
@@ -40,74 +40,53 @@
                 movie: movie,
                 page: 1,
                 onRender: function(object) {
-                    // ФІЛЬТРИ: Беремо логіку з твого нового плагіна
-                    var filter_items = {
+                    // Малюємо фільтр (Сенс плагіна)
+                    object.filter.set({
                         source: [
-                            {title: 'Ashdi (UA)', source: 'ashdi', selected: true},
-                            {title: 'VideoCDN', source: 'vcdn'},
-                            {title: 'Rezka', source: 'rezka'},
-                            {title: 'KinoBase', source: 'kinobase'}
+                            {title: 'Всі джерела', source: 'all', selected: true}
                         ]
-                    };
+                    });
 
-                    object.filter.set(filter_items);
+                    object.search = function() {
+                        object.loading(true);
+                        
+                        // Звертаємося до твого Vercel
+                        var url = api_host + '?title=' + encodeURIComponent(movie.title || movie.name);
 
-                    object.filter.onSelect = function(type, item) {
-                        if (type === 'source') {
-                            _this.search(object, movie, item.source);
-                        }
-                    };
+                        $.ajax({
+                            url: url,
+                            method: 'GET',
+                            dataType: 'json',
+                            timeout: 15000,
+                            success: function(res) {
+                                if (res && res.length) {
+                                    var items = res.map(function(item) {
+                                        return {
+                                            title: item.title,
+                                            file: item.file,
+                                            quality: item.quality || 'HD',
+                                            info: item.info || 'UA'
+                                        };
+                                    });
 
-                    // Перший запуск
-                    _this.search(object, movie, 'ashdi');
-                }
-            });
-        };
-
-        this.search = function (object, movie, balanser) {
-            object.loading(true);
-            
-            // Використовуємо метод формування запиту як у Lampac
-            var query = 'id=' + movie.id + 
-                        '&title=' + encodeURIComponent(movie.title || movie.name) + 
-                        '&serial=' + (movie.number_of_seasons ? 1 : 0);
-
-            // Пряме звернення до балансера через проксі-шлюз
-            var url = 'https://corsproxy.io/?' + encodeURIComponent('https://' + balanser + '.vip/api/video?' + query);
-            
-            // Якщо VideoCDN, змінюємо шлях
-            if (balanser === 'vcdn') {
-                url = 'https://corsproxy.io/?' + encodeURIComponent('https://videocdn.tv/api/short?api_token=3i40v5i7z6CcU4SHe627S74y704mIu62&' + query);
-            }
-
-            $.ajax({
-                url: url,
-                method: 'GET',
-                dataType: 'json',
-                success: function(res) {
-                    var data = res.data || res;
-                    if (data && data.length) {
-                        var items = data.map(function(i) {
-                            return {
-                                title: i.title || movie.title,
-                                file: i.file || i.iframe_src || i.url,
-                                quality: i.quality || 'HD',
-                                info: balanser.toUpperCase()
-                            };
-                        });
-                        object.draw(items, {
-                            onEnter: function(item) {
-                                Lampa.Player.play({url: item.file, title: item.title});
+                                    object.draw(items, {
+                                        onEnter: function(i) {
+                                            Lampa.Player.play({url: i.file, title: i.title});
+                                        }
+                                    });
+                                } else {
+                                    object.empty();
+                                }
+                                object.loading(false);
+                            },
+                            error: function() {
+                                object.doesNotAnswer();
+                                object.loading(false);
                             }
                         });
-                    } else {
-                        object.empty();
-                    }
-                    object.loading(false);
-                },
-                error: function() {
-                    object.doesNotAnswer();
-                    object.loading(false);
+                    };
+
+                    object.search();
                 }
             });
         };
