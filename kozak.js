@@ -14,7 +14,7 @@
 
         this.render = function (data, html) {
             $('.lampa-kozak-btn').remove();
-            var btn = $('<div class="full-start__button selector lampa-kozak-btn" style="background: #ffde1a !important; color: #000 !important; border: 1px solid #fff;"><span>КОЗАК ТВ</span></div>');
+            var btn = $('<div class="full-start__button selector lampa-kozak-btn" style="background: #ffde1a !important; color: #000 !important; border: 2px solid #fff;"><span>КОЗАК ТВ</span></div>');
             btn.on('hover:enter click', function () { _this.open(data.movie); });
             $(html).find('.full-start-new__buttons, .full-start__buttons').append(btn);
         };
@@ -24,47 +24,71 @@
             
             Lampa.Activity.push({
                 title: 'Козак ТВ',
-                component: 'online', // Використовуємо системний компонент, але з нашим тунелем
+                component: 'online',
                 movie: movie,
                 page: 1,
                 onRender: function(object) {
                     object.search = function() {
                         object.loading(true);
-                        
-                        // Параметри запиту до робочого шлюзу з твого прикладу
-                        var url = 'http://golampaua.mooo.com/lite/online';
-                        var query = '?id=' + movie.id + '&title=' + encodeURIComponent(title) + '&year=' + (movie.release_date || '').slice(0,4);
 
-                        // Використовуємо NativeWsClient - це "бронебійний" метод
-                        Lampa.NativeWsClient.send('proxy', {
-                            url: url + query,
-                            method: 'GET'
-                        }, function(res) {
-                            if (res && res.length) {
-                                var items = res.map(function(i) {
+                        // Використовуємо один з найнадійніших шлюзів, згаданих у check.sh
+                        var url = 'https://cors.lampac.sh/https://videocdn.tv/api/short?api_token=3i40v5i7z6CcU4SHe627S74y704mIu62&title=' + encodeURIComponent(title);
+
+                        var network = new Lampa.Reguest();
+                        
+                        // Параметри запиту, що імітують Lampac
+                        network.silent(url, function (res) {
+                            var data = res.data || res;
+                            if (data && data.length) {
+                                var items = data.map(function (i) {
                                     return {
-                                        title: i.name || i.title || title,
-                                        file: i.url || i.video || i.file,
-                                        quality: i.quality || 'HD',
-                                        info: 'UA/INT'
+                                        title: i.title || title,
+                                        file: i.iframe_src || i.file,
+                                        quality: '1080p',
+                                        info: 'VideoCDN (UA Proxy)'
                                     };
                                 });
                                 object.draw(items, {
-                                    onEnter: function(item) {
-                                        Lampa.Player.play({url: item.file, title: item.title});
+                                    onEnter: function (item) {
+                                        var video = item.file;
+                                        if (video.indexOf('//') === 0) video = 'https:' + video;
+                                        Lampa.Player.play({ url: video, title: item.title });
                                     }
                                 });
                             } else {
                                 object.empty();
                             }
                             object.loading(false);
-                        }, function() {
-                            Lampa.Noty.show('Тунель заблоковано. Увімкніть Proxy в налаштуваннях Лампи!');
-                            object.loading(false);
+                        }, function () {
+                            // Якщо VideoCDN лежить, пробуємо запасний варіант (Alloha)
+                            _this.tryAlloha(title, object);
                         });
                     };
                     object.search();
                 }
+            });
+        };
+
+        this.tryAlloha = function(title, object) {
+            var url = 'https://api.alloha.tv/?token=044417740f9350436d7a71888e5d61&name=' + encodeURIComponent(title);
+            var network = new Lampa.Reguest();
+            network.silent(url, function(res) {
+                if (res && res.data && res.data.iframe) {
+                    object.draw([{
+                        title: res.data.name || title,
+                        file: res.data.iframe,
+                        quality: 'HD',
+                        info: 'Alloha (UA Proxy)'
+                    }], {
+                        onEnter: function(item) { Lampa.Player.play({url: item.file, title: item.title}); }
+                    });
+                } else {
+                    object.empty();
+                }
+                object.loading(false);
+            }, function() {
+                object.empty();
+                object.loading(false);
             });
         };
     }
