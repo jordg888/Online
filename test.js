@@ -1,19 +1,41 @@
 (function() {
     'use strict';
-
-    console.log('Старт плагіна');
-
-    // Просте додавання кнопки
-    setTimeout(function() {
+    
+    console.log('Плагін запущено');
+    
+    // Функція додавання кнопки
+    function addButton() {
+        // Шукаємо контейнер з кнопками
         var container = $('.full-start__buttons').first();
         
         if (container.length) {
-            var button = $('<div class="selector" style="padding:10px; background:red; color:white;">ТЕСТ</div>');
-            container.append(button);
+            // Шукаємо кнопку "Онлайн"
+            var onlineButton = container.find('.selector:contains("Онлайн")').first();
             
-            button[0].onclick = function() {
-                alert('Працює');
-            };
+            if (onlineButton.length) {
+                // Створюємо кнопку як копію сусідньої
+                var button = $('<div class="selector full-start__button">' +
+                               '<div>⚖️</div>' +
+                               '<span>Балансер</span>' +
+                               '</div>');
+                
+                // Додаємо після кнопки "Онлайн"
+                onlineButton.after(button);
+                
+                // Додаємо обробник
+                button.on('click', function() {
+                    alert('Працює!');
+                });
+                
+                console.log('Кнопку додано після Онлайн');
+            }
         }
-    }, 3000);
+    }
+    
+    // Перевіряємо кожну секунду
+    setInterval(function() {
+        if ($('.full-start__buttons').length) {
+            addButton();
+        }
+    }, 1000);
 })();
