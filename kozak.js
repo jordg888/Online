@@ -21,61 +21,52 @@
 
         this.search = function (movie) {
             var title = movie.title || movie.name;
-            // Використовуємо Alloha - він часто працює без додаткових шлюзів
-            var url = 'https://api.alloha.tv/?token=044417740f9350436d7a71888e5d61&name=' + encodeURIComponent(title);
+            // Використовуємо спеціалізований шлюз для обходу гео-блокувань
+            var base_url = 'https://videocdn.tv/api/short?api_token=3i40v5i7z6CcU4SHe627S74y704mIu62&title=' + encodeURIComponent(title);
+            var proxy_url = 'https://api.allorigins.win/get?url=' + encodeURIComponent(base_url);
 
             Lampa.Select.show({
                 title: 'Пошук: ' + title,
-                items: [{title: 'З'єднуємося з базою...', any: true}],
+                items: [{title: 'Обхід блокування (EU Proxy)...', any: true}],
                 onSelect: function() {},
                 onBack: function() { Lampa.Controller.toggle('content'); }
             });
 
             var network = new Lampa.Reguest();
-            network.silent(url, function (res) {
-                if (res && res.data && res.data.iframe) {
-                    var items = [{
-                        title: res.data.name || title,
-                        subtitle: 'Знав за назвою (ALLOHA)',
-                        file: res.data.iframe
-                    }];
+            network.silent(proxy_url, function (res) {
+                // allorigins повертає дані у полі contents як рядок
+                try {
+                    var response = JSON.parse(res.contents);
+                    var data = response.data || response;
 
-                    Lampa.Select.show({
-                        title: 'Результати знайдено',
-                        items: items,
-                        onSelect: function (item) {
-                            var video = item.file;
-                            if (video.indexOf('//') === 0) video = 'https:' + video;
-                            Lampa.Player.play({ url: video, title: item.title });
-                        }
-                    });
-                } else {
-                    Lampa.Noty.show('База Alloha не знайшла цей фільм');
+                    if (data && data.length) {
+                        var items = data.map(function (i) {
+                            return {
+                                title: i.title || title,
+                                subtitle: 'Джерело: VideoCDN',
+                                file: i.iframe_src || i.file
+                            };
+                        });
+
+                        Lampa.Select.show({
+                            title: 'Знайдено через шлюз',
+                            items: items,
+                            onSelect: function (item) {
+                                var video = item.file;
+                                if (video.indexOf('//') === 0) video = 'https:' + video;
+                                Lampa.Player.play({ url: video, title: item.title });
+                            }
+                        });
+                    } else {
+                        Lampa.Noty.show('Фільм не знайдено в базі');
+                        Lampa.Select.close();
+                    }
+                } catch (e) {
+                    Lampa.Noty.show('Помилка дешифрування даних');
                     Lampa.Select.close();
                 }
             }, function () {
-                // Якщо і це не працює - пробуємо останній шанс через інший проксі
-                _this.tryBackup(title);
-            });
-        };
-
-        this.tryBackup = function(title) {
-            var backup_url = 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent('https://videocdn.tv/api/short?api_token=3i40v5i7z6CcU4SHe627S74y704mIu62&title=' + title);
-            var network = new Lampa.Reguest();
-            network.silent(backup_url, function(res) {
-                var data = res.data || res;
-                if (data && data.length) {
-                    Lampa.Select.show({
-                        title: 'Резервний канал',
-                        items: data.map(function(i){ return {title: i.title, file: i.iframe_src, subtitle: 'VideoCDN'}; }),
-                        onSelect: function(item) { Lampa.Player.play({url: item.file, title: item.title}); }
-                    });
-                } else {
-                    Lampa.Noty.show('Всі шлюзи заблоковані провайдером');
-                    Lampa.Select.close();
-                }
-            }, function() {
-                Lampa.Noty.show('Повна блокада мережі');
+                Lampa.Noty.show('Сервер у Польщі/Європі не відповідає');
                 Lampa.Select.close();
             });
         };
