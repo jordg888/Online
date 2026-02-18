@@ -3,8 +3,6 @@
 
     function KozakTiv() {
         var _this = this;
-        // Твоя адреса на Vercel
-        var api_host = 'https://host-vercel-theta.vercel.app/api/online';
 
         this.init = function () {
             Lampa.Listener.follow('full', function (e) {
@@ -22,15 +20,9 @@
         };
 
         this.render = function (data, html) {
-            var button = $('<div class="full-start__button selector lampa-kozak-button" style="border: 2px solid #ffde1a !important; background: rgba(255, 222, 26, 0.2) !important;"><span style="font-weight: bold; color: #fff;">КОЗАК ТВ</span></div>');
-            
-            button.on('hover:enter click', function() {
-                _this.open(data.movie);
-            });
-
-            var container = $(html).find('.full-start-new__buttons, .full-start__buttons');
-            if (container.find('.lampa-kozak-button').length) return;
-            container.append(button);
+            var button = $('<div class="full-start__button selector lampa-kozak-button" style="border: 2px solid #ffde1a !important; background: rgba(255, 222, 26, 0.2) !important;"><span style="font-weight: bold; color: #fff;">КОЗАК ТВ (Multi)</span></div>');
+            button.on('hover:enter click', function() { _this.open(data.movie); });
+            $(html).find('.full-start-new__buttons, .full-start__buttons').append(button);
         };
 
         this.open = function (movie) {
@@ -40,59 +32,67 @@
                 movie: movie,
                 page: 1,
                 onRender: function(object) {
-                    // Малюємо фільтр (Сенс плагіна)
-                    object.filter.set({
-                        source: [
-                            {title: 'Всі джерела', source: 'all', selected: true}
-                        ]
-                    });
+                    // Фільтр для вигляду
+                    object.filter.set({ source: [{title: 'Всі джерела', source: 'all', selected: true}] });
 
                     object.search = function() {
                         object.loading(true);
-                        
-                        // Звертаємося до твого Vercel
-                        var url = api_host + '?title=' + encodeURIComponent(movie.title || movie.name);
+                        var title = movie.title || movie.name;
+                        var results = [];
+                        var count = 0;
 
-                        $.ajax({
-                            url: url,
-                            method: 'GET',
-                            dataType: 'json',
-                            timeout: 15000,
-                            success: function(res) {
-                                if (res && res.length) {
-                                    var items = res.map(function(item) {
-                                        return {
-                                            title: item.title,
-                                            file: item.file,
-                                            quality: item.quality || 'HD',
-                                            info: item.info || 'UA'
-                                        };
-                                    });
+                        // Список джерел для прямого опитування
+                        var sources = [
+                            { name: 'VCDN', url: 'https://videocdn.tv/api/short?api_token=3i40v5i7z6CcU4SHe627S74y704mIu62&title=' + encodeURIComponent(title) },
+                            { name: 'Ashdi', url: 'https://ashdi.vip/api/video?title=' + encodeURIComponent(title) },
+                            { name: 'KBase', url: 'https://kinobase.org/api/v1/search?title=' + encodeURIComponent(title) }
+                        ];
 
-                                    object.draw(items, {
-                                        onEnter: function(i) {
-                                            Lampa.Player.play({url: i.file, title: i.title});
-                                        }
+                        sources.forEach(function(src) {
+                            // Використовуємо corsproxy, щоб обійти CORS, але запит іде від твого IP
+                            var final_url = 'https://corsproxy.io/?' + encodeURIComponent(src.url);
+
+                            $.ajax({
+                                url: final_url,
+                                method: 'GET',
+                                dataType: 'json',
+                                success: function(res) {
+                                    var data = res.data || res;
+                                    if (data && data.length) {
+                                        data.forEach(function(item) {
+                                            results.push({
+                                                title: item.title || title,
+                                                file: item.file || item.iframe_src || item.url,
+                                                quality: 'HD',
+                                                info: src.name
+                                            });
+                                        });
+                                    }
+                                    checkEnd();
+                                },
+                                error: function() { checkEnd(); }
+                            });
+                        });
+
+                        function checkEnd() {
+                            count++;
+                            if (count === sources.length) {
+                                if (results.length > 0) {
+                                    object.draw(results, {
+                                        onEnter: function(i) { Lampa.Player.play({url: i.file, title: i.title}); }
                                     });
                                 } else {
                                     object.empty();
                                 }
                                 object.loading(false);
-                            },
-                            error: function() {
-                                object.doesNotAnswer();
-                                object.loading(false);
                             }
-                        });
+                        }
                     };
-
                     object.search();
                 }
             });
         };
     }
 
-    if (window.Lampa) {
-        new KozakTiv().init();
-    }
+    if (window.Lampa) new KozakTiv().init();
 })();
