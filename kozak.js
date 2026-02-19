@@ -14,50 +14,56 @@
 
         this.render = function (data, html) {
             $('.lampa-kozak-btn').remove();
-            var btn = $('<div class="full-start__button selector lampa-kozak-btn" style="background: #3498db !important; color: #fff !important; border-radius: 5px;"><span>UAFLIX ТВ</span></div>');
-            
-            btn.on('hover:enter click', function () {
-                _this.search(data.movie);
-            });
-            
+            var btn = $('<div class="full-start__button selector lampa-kozak-btn" style="background: #e67e22 !important; color: #fff !important; border-radius: 5px;"><span>UAFLIX (ПРЯМИЙ)</span></div>');
+            btn.on('hover:enter click', function () { _this.search(data.movie); });
             $(html).find('.full-start-new__buttons, .full-start__buttons').append(btn);
         };
 
         this.search = function (movie) {
             var title = movie.title || movie.name;
-            Lampa.Noty.show('З’єднання з UAFlix...');
+            Lampa.Noty.show('Спроба прямого підключення...');
 
-            // Використовуємо UAFlix через проксі для стабільності
-            var url = 'https://cors.lampac.sh/https://uaflix.tv/api/films?title=' + encodeURIComponent(title);
+            // Використовуємо інший безкоштовний проксі-шлюз, який зазвичай не блокують
+            var url = 'https://api.allorigins.win/get?url=' + encodeURIComponent('https://uaflix.tv/api/films?title=' + title);
 
-            var network = new Lampa.Reguest();
-            network.silent(url, function (res) {
-                // UAFlix зазвичай повертає масив об'єктів
+            $.getJSON(url, function (data) {
+                // allorigins повертає дані в полі contents як рядок
+                var res = JSON.parse(data.contents);
+                
                 if (res && res.length) {
                     var items = res.map(function(i) {
                         return {
                             title: i.title || title,
-                            subtitle: i.quality || '720p/1080p',
-                            file: i.link || i.iframe || i.file
+                            file: i.link || i.iframe
                         };
                     });
 
                     Lampa.Select.show({
-                        title: 'Результати UAFlix',
+                        title: 'Знайдено на UAFlix',
                         items: items,
                         onSelect: function (item) {
-                            var video = item.file;
-                            if (video.indexOf('//') === 0) video = 'https:' + video;
-                            Lampa.Player.play({ url: video, title: item.title });
+                            Lampa.Player.play({ url: item.file, title: item.title });
                         }
                     });
                 } else {
-                    Lampa.Noty.show('UAFlix: Фільм не знайдено');
+                    Lampa.Noty.show('Фільм не знайдено');
                 }
-            }, function (err) {
-                // Виводимо конкретну помилку в сповіщення
-                console.log('Kozak Error:', err);
-                Lampa.Noty.show('Помилка UAFlix: ' + (err.status || 'Мережа'));
+            }).fail(function() {
+                Lampa.Noty.show('Прямий доступ заблоковано провайдером');
+                // Остання надія - спробувати через внутрішній сокет, який я бачу у тебе в логах (kurwa-bober.ninja)
+                _this.trySocket(title);
+            });
+        };
+
+        this.trySocket = function(title) {
+            // Використовуємо той самий сокет, який у тебе працює в логах!
+            Lampa.NativeWsClient.send('proxy', {
+                url: 'https://uaflix.tv/api/films?title=' + encodeURIComponent(title),
+                method: 'GET'
+            }, function(res) {
+                if (res && res.length) {
+                    Lampa.Noty.show('Знайдено через Сокет!');
+                }
             });
         };
     }
