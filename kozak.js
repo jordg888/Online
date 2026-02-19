@@ -11,50 +11,40 @@
                     var btn = $('<div class="full-start__button selector kozak-button" style="background: #e67e22; color: #fff; margin-bottom: 10px;"><span>КОЗАК ТВ</span></div>');
                     
                     btn.on('click', function () {
-                        openKozakMenu(e.data.movie);
+                        var movie = e.data.movie;
+                        
+                        Lampa.Select.show({
+                            title: 'Вибір джерела (UA)',
+                            items: [
+                                { title: 'Енеїда / UA-Kino (VJS)', id: 'vjs' },
+                                { title: 'Ashdi (Тільки UA)', id: 'ashdi' }
+                            ],
+                            onSelect: function (item) {
+                                // Пряме формування URL
+                                var embedUrl = (item.id === 'vjs') 
+                                    ? 'https://vjs.su/embed/tmdb/' + movie.id 
+                                    : 'https://ashdi.vip/emb/' + movie.id;
+
+                                // Видаляємо Select з екрану примусово
+                                Lampa.Select.close();
+
+                                // Запуск плеєра через push
+                                Lampa.Activity.push({
+                                    url: embedUrl,
+                                    title: 'Козак ТВ',
+                                    component: 'iframe',
+                                    page: 1
+                                });
+                            },
+                            onBack: function () {
+                                // Просто закриваємо меню без додаткових команд
+                                Lampa.Select.close();
+                            }
+                        });
                     });
 
                     container.append(btn);
                 }
-            }
-        });
-    }
-
-    function openKozakMenu(movie) {
-        Lampa.Select.show({
-            title: 'Вибір джерела (UA)',
-            items: [
-                {
-                    title: 'Енеїда / UA-Kino (VJS)',
-                    id: 'vjs'
-                },
-                {
-                    title: 'Ashdi (Тільки UA)',
-                    id: 'ashdi'
-                }
-            ],
-            onSelect: function (item) {
-                var embedUrl = (item.id === 'vjs') 
-                    ? 'https://vjs.su/embed/tmdb/' + movie.id 
-                    : 'https://ashdi.vip/emb/' + movie.id;
-
-                // 1. Спочатку закриваємо меню БЕЗ виклику зворотних функцій
-                Lampa.Select.close();
-
-                // 2. Створюємо компонент вручну (це найнадійніший метод)
-                var activity = {
-                    component: 'iframe',
-                    title: 'Козак ТВ',
-                    url: embedUrl,
-                    page: 1
-                };
-
-                // 3. Штовхаємо в стек
-                Lampa.Activity.push(activity);
-            },
-            onBack: function () {
-                // Просто закриваємо без зайвих команд
-                Lampa.Select.close();
             }
         });
     }
