@@ -5,27 +5,57 @@
         Lampa.Listener.follow('full', function (e) {
             if (e.type === 'complite') {
                 var render = e.object.activity.render();
-                // Шукаємо контейнер для кнопок
                 var container = render.find('.full-start-new__buttons, .full-start__buttons');
                 
                 if (container.length && !container.find('.kozak-button').length) {
-                    // Створюємо кнопку з примусовими стилями для видимості
-                    var btn = $('<div class="full-start__button selector kozak-button" style="background: #24b47e; color: #fff; opacity: 1 !important; display: flex !important;"><span>КОЗАК ТВ</span></div>');
+                    var btn = $('<div class="full-start__button selector kozak-button" style="background: #e67e22; color: #fff;"><span>КОЗАК ТВ</span></div>');
                     
                     btn.on('click', function () {
-                        // Викликаємо пошук по всіх встановлених балансерах
-                        Lampa.Component.add('online', {
-                            title: e.data.movie.title || e.data.movie.name,
-                            url: '',
-                            movie: e.data.movie,
-                            onBack: function() {
-                                Lampa.Activity.backward();
-                            }
-                        });
+                        openKozakMenu(e.data.movie);
                     });
 
                     container.append(btn);
                 }
+            }
+        });
+    }
+
+    function openKozakMenu(movie) {
+        // Створюємо завантажувач
+        Lampa.Select.show({
+            title: 'Вибір джерела (UA)',
+            items: [
+                {
+                    title: 'Балансер: Енеїда / UA-Kino',
+                    subtitle: 'Найкраща якість та озвучка',
+                    source: 'vjs'
+                },
+                {
+                    title: 'Балансер: Ashdi',
+                    subtitle: 'Тільки українська мова',
+                    source: 'ashdi'
+                }
+            ],
+            onSelect: function (item) {
+                var url = '';
+                if (item.source === 'vjs') {
+                    url = 'https://vjs.su/embed/tmdb/' + movie.id;
+                } else {
+                    url = 'https://ashdi.vip/emb/' + movie.id;
+                }
+
+                // Запуск вбудованого iframe плеєра
+                Lampa.Component.add('iframe', {
+                    title: movie.title || movie.name,
+                    url: url,
+                    clean: true,
+                    onBack: function() {
+                        Lampa.Activity.backward();
+                    }
+                });
+            },
+            onBack: function () {
+                Lampa.Select.close();
             }
         });
     }
