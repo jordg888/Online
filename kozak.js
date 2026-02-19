@@ -4,6 +4,7 @@
     function KozakTiv() {
         var _this = this;
 
+        // 1. Ініціалізація: стежимо за відкриттям картки фільму
         this.init = function () {
             Lampa.Listener.follow('full', function (e) {
                 if (e.type === 'complite') {
@@ -12,63 +13,55 @@
             });
         };
 
+        // 2. Рендеринг кнопки (повертаємо її на екран)
         this.render = function (data, html) {
-            $('.lampa-kozak-btn').remove();
-            var btn = $('<div class="full-start__button selector lampa-kozak-btn" style="background: #ffde1a !important; color: #000 !important; border: 2px solid #fff;"><span>КОЗАК ТВ</span></div>');
-            btn.on('hover:enter click', function () { _this.open(data.movie); });
+            $('.lampa-kozak-btn').remove(); // Чистимо старі кнопки
+            
+            var btn = $('<div class="full-start__button selector lampa-kozak-btn" style="background: #ffde1a !important; color: #000 !important; border-radius: 5px; font-weight: bold;"><span>КОЗАК ТВ</span></div>');
+            
+            btn.on('hover:enter click', function () {
+                _this.search(data.movie);
+            });
+            
+            // Додаємо кнопку в блок кнопок на сторінці фільму
             $(html).find('.full-start-new__buttons, .full-start__buttons').append(btn);
         };
 
-        this.open = function (movie) {
-            // Замість того, щоб шукати самим, ми відкриваємо стандартне вікно пошуку Lampa
-            // Але з підставленими параметрами від нашого "Козака"
-            Lampa.Component.add('kozak_online', function (object, exam) {
-                var network = new Lampa.Reguest();
-                var scroll = new Lampa.Scroll({mask: true, over: true});
-                var files = new Lampa.Explorer(object);
+        // 3. Пошук (через просте спливаюче вікно)
+        this.search = function (movie) {
+            var title = movie.title || movie.name;
+            Lampa.Noty.show('Шукаємо відео...');
 
-                object.create = function () {
-                    var title = movie.title || movie.name;
-                    // Використовуємо універсальний шлях Lampac, який точно працює в Україні
-                    var url = 'https://cors.lampac.sh/https://alloha.tv/api/info?token=044417740f9350436d7a71888e5d61&name=' + encodeURIComponent(title);
+            // Використовуємо Alloha через стабільний проксі, щоб уникнути помилки відтворення
+            var url = 'https://cors.lampac.sh/https://api.alloha.tv/?token=044417740f9350436d7a71888e5d61&name=' + encodeURIComponent(title);
 
-                    network.silent(url, function (res) {
-                        if (res && res.data && res.data.iframe) {
-                            var video = res.data.iframe;
-                            if (video.indexOf('//') === 0) video = 'https:' + video;
-                            
-                            // Створюємо елемент списку
-                            var card = Lampa.Template.get('online_item', {
-                                title: 'Дивитися через Козак ТВ',
-                                quality: 'HD'
+            var network = new Lampa.Reguest();
+            network.silent(url, function (res) {
+                if (res && res.data && res.data.iframe) {
+                    var video = res.data.iframe;
+                    if (video.indexOf('//') === 0) video = 'https:' + video;
+
+                    Lampa.Select.show({
+                        title: 'Знайдено на Козак ТВ',
+                        items: [{title: 'Дивитися: ' + title, file: video}],
+                        onSelect: function (item) {
+                            Lampa.Player.play({
+                                url: item.file,
+                                title: title
                             });
-
-                            card.on('hover:enter click', function () {
-                                Lampa.Player.play({ url: video, title: title });
-                            });
-
-                            scroll.append(card);
-                        } else {
-                            scroll.append('<div class="empty">На жаль, за прямим посиланням нічого не знайдено. Спробуйте через розділ "Онлайн" у меню.</div>');
                         }
-                        object.loading(false);
-                    }, function () {
-                        object.loading(false);
-                        Lampa.Noty.show('Помилка сервера. Спробуйте змінити Парсер у налаштуваннях.');
                     });
-
-                    return scroll.render();
-                };
-            });
-
-            Lampa.Activity.push({
-                title: 'Козак ТВ',
-                component: 'kozak_online',
-                movie: movie,
-                page: 1
+                } else {
+                    Lampa.Noty.show('На жаль, відео не знайдено');
+                }
+            }, function () {
+                Lampa.Noty.show('Помилка сервера. Спробуйте пізніше.');
             });
         };
     }
 
-    if (window.Lampa) new KozakTiv().init();
+    // Запуск плагіна
+    if (window.Lampa) {
+        new KozakTiv().init();
+    }
 })();
