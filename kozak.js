@@ -21,53 +21,56 @@
 
         this.search = function (movie) {
             var title = movie.title || movie.name;
-            var clean_title = title.replace(/[:]/g, ''); // Деякі бази не люблять двокрапки
+            var clean_title = title.replace(/[:]/g, '');
             
-            Lampa.Noty.show('Пошук у базах...');
+            Lampa.Noty.show('Пошук на Козак ТВ...');
 
-            // Використовуємо Alloha через corsproxy, оскільки ти кажеш, що проксі не потрібен
+            // Використовуємо Alloha як основне джерело (воно стабільніше для плеєра)
             var url = 'https://api.alloha.tv/?token=044417740f9350436d7a71888e5d61&name=' + encodeURIComponent(clean_title);
 
             $.ajax({
                 url: url,
                 method: 'GET',
                 dataType: 'json',
-                timeout: 5000,
                 success: function (res) {
+                    var items = [];
+                    
                     if (res && res.data && res.data.iframe) {
-                        var items = [{
-                            title: res.data.name || title,
-                            subtitle: 'Якість: HD',
+                        items.push({
+                            title: 'Дивитися (Канал 1)',
+                            subtitle: 'Якість: Авто',
                             file: res.data.iframe
-                        }];
-
-                        Lampa.Select.show({
-                            title: 'Знайдено на Козак ТВ',
-                            items: items,
-                            onSelect: function (item) {
-                                var video = item.file;
-                                if (video.indexOf('//') === 0) video = 'https:' + video;
-                                Lampa.Player.play({ url: video, title: item.title });
-                            }
                         });
-                    } else {
-                        // Якщо Alloha не знайшла, спробуємо резерв (Rezka) через прямий плеєр
-                        _this.playDirect(clean_title);
                     }
+
+                    // Додаємо Rezka як Канал 2 через спеціальний шлюз
+                    items.push({
+                        title: 'Дивитися (Канал 2)',
+                        subtitle: 'Джерело: Rezka',
+                        file: 'https://voidboost.net/embed/movie?title=' + encodeURIComponent(clean_title)
+                    });
+
+                    Lampa.Select.show({
+                        title: 'Оберіть канал для: ' + title,
+                        items: items,
+                        onSelect: function (item) {
+                            var video = item.file;
+                            if (video.indexOf('//') === 0) video = 'https:' + video;
+                            
+                            // Використовуємо Lampa.Player.play з додатковими параметрами
+                            Lampa.Player.play({
+                                url: video,
+                                title: title,
+                                // Додаємо цей блок, щоб плеєр не вибивав помилку
+                                callback: function() {
+                                    Lampa.Controller.toggle('player');
+                                }
+                            });
+                        }
+                    });
                 },
                 error: function () {
-                    _this.playDirect(clean_title);
-                }
-            });
-        };
-
-        this.playDirect = function(title) {
-            var rezka_url = 'https://voidboost.net/embed/movie?title=' + encodeURIComponent(title);
-            Lampa.Select.show({
-                title: 'Резервне джерело',
-                items: [{title: 'Дивитися на Rezka', file: rezka_url}],
-                onSelect: function(item) {
-                    Lampa.Player.play({ url: item.file, title: title });
+                    Lampa.Noty.show('Помилка з’єднання з базою');
                 }
             });
         };
