@@ -1,56 +1,59 @@
 (function () {
     'use strict';
 
-    function KozakPlugin() {
-        // Спроба номер 1: Через стандартний Listener
+    function KozakInit() {
+        console.log('[Kozak] Plugin started');
+
+        // Використовуємо вбудований метод Lampa для слухання подій
         Lampa.Listener.follow('full', function (e) {
-            if (e.type === 'complite' || e.type === 'ready') {
-                addButton(e.object.activity.render(), e.data);
+            if (e.type === 'complite') {
+                // Додаємо невелику затримку, щоб DOM встиг відрендеритись
+                setTimeout(function() {
+                    injectButton(e);
+                }, 10);
             }
         });
+    }
 
-        // Спроба номер 2: Пряма ін'єкція в рендер (для надійності)
-        var originalRender = Lampa.Component.get('full').prototype.create;
-        Lampa.Component.get('full').prototype.create = function() {
-            var render = originalRender.apply(this, arguments);
-            addButton(this.render(), this.data);
-            return render;
-        };
+    function injectButton(e) {
+        // Перевіряємо, чи ми на сторінці фільму і чи є об'єкт рендеру
+        var render = e.object.activity.render();
+        if (!render) return;
 
-        function addButton(html, data) {
-            if (!html || !data || !data.movie) return;
+        // Шукаємо контейнер для кнопок (через ванільний JS для надійності)
+        var container = render[0].querySelector('.full-start-new__buttons, .full-start__buttons');
+        
+        if (container && !container.querySelector('.kozak-button')) {
+            // Створюємо кнопку
+            var btn = document.createElement('div');
+            btn.className = 'full-start__button selector kozak-button';
+            btn.innerHTML = '<span>КОЗАК ТВ</span>';
             
-            // Перевіряємо, чи ми вже не додали кнопку
-            if ($(html).find('.kozak-button').length > 0) return;
+            // Стиль (якщо раптом CSS не підхопиться)
+            btn.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+            btn.style.marginLeft = '10px';
 
-            var btn = $('<div class="full-start__button selector kozak-button"><span>КОЗАК ТВ</span></div>');
-
-            btn.on('click', function () {
-                var video_url = 'https://vjs.su/embed/tmdb/' + data.movie.id;
+            btn.addEventListener('click', function () {
+                var movie = e.data.movie;
+                var videoUrl = 'https://vjs.su/embed/tmdb/' + movie.id;
                 
+                // Виклик вбудованого плеєра/iframe Lampa
                 Lampa.Component.add('iframe', {
-                    title: 'Козак ТВ',
-                    url: video_url,
-                    clean: true,
-                    onBack: function() {
-                        Lampa.Activity.backward();
-                    }
+                    title: 'Козак ТВ: ' + (movie.title || movie.name),
+                    url: videoUrl,
+                    clean: true
                 });
             });
 
-            // Шукаємо місце для кнопки
-            var container = $(html).find('.full-start-new__buttons, .full-start__buttons');
-            if (container.length) {
-                container.append(btn);
-            }
+            container.appendChild(btn);
+            console.log('[Kozak] Button injected for ID:', e.data.movie.id);
         }
     }
 
-    // Безпечний запуск
+    // Перевірка наявності Lampa перед ініціалізацією
     if (window.Lampa) {
-        KozakPlugin();
+        KozakInit();
     } else {
-        // Якщо Lampa ще не завантажилася, чекаємо
-        window.addEventListener('lampa_ready', KozakPlugin);
+        window.addEventListener('lampa_ready', KozakInit);
     }
 })();
