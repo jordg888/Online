@@ -8,7 +8,7 @@
                 var container = render.find('.full-start-new__buttons, .full-start__buttons');
                 
                 if (container.length && !container.find('.kozak-button').length) {
-                    var btn = $('<div class="full-start__button selector kozak-button" style="background: #e67e22; color: #fff;"><span>КОЗАК ТВ</span></div>');
+                    var btn = $('<div class="full-start__button selector kozak-button" style="background: #e67e22; color: #fff; margin-bottom: 10px;"><span>КОЗАК ТВ</span></div>');
                     
                     btn.on('click', function () {
                         openKozakMenu(e.data.movie);
@@ -21,37 +21,42 @@
     }
 
     function openKozakMenu(movie) {
-        // Створюємо завантажувач
         Lampa.Select.show({
             title: 'Вибір джерела (UA)',
             items: [
                 {
-                    title: 'Балансер: Енеїда / UA-Kino',
-                    subtitle: 'Найкраща якість та озвучка',
-                    source: 'vjs'
+                    title: 'Енеїда / UA-Kino (VJS)',
+                    subtitle: 'Меню вибору якості та озвучки',
+                    id: 'vjs'
                 },
                 {
-                    title: 'Балансер: Ashdi',
-                    subtitle: 'Тільки українська мова',
-                    source: 'ashdi'
+                    title: 'Ashdi (Тільки UA)',
+                    subtitle: 'Прямий запуск',
+                    id: 'ashdi'
                 }
             ],
             onSelect: function (item) {
-                var url = '';
-                if (item.source === 'vjs') {
-                    url = 'https://vjs.su/embed/tmdb/' + movie.id;
+                var embedUrl = '';
+                var type = movie.number_of_seasons ? 'tv' : 'movie'; // Перевірка чи це серіал
+                var id = movie.id;
+
+                if (item.id === 'vjs') {
+                    embedUrl = 'https://vjs.su/embed/tmdb/' + id;
                 } else {
-                    url = 'https://ashdi.vip/emb/' + movie.id;
+                    embedUrl = 'https://ashdi.vip/emb/' + id;
                 }
 
-                // Запуск вбудованого iframe плеєра
-                Lampa.Component.add('iframe', {
-                    title: movie.title || movie.name,
-                    url: url,
-                    clean: true,
-                    onBack: function() {
-                        Lampa.Activity.backward();
-                    }
+                console.log('[Kozak] Opening URL:', embedUrl);
+
+                // Закриваємо меню перед відкриттям плеєра
+                Lampa.Select.close();
+
+                // Використовуємо Activity.push для гарантованого відкриття
+                Lampa.Activity.push({
+                    url: embedUrl,
+                    title: 'Козак ТВ: ' + (movie.title || movie.name),
+                    component: 'iframe',
+                    page: 1
                 });
             },
             onBack: function () {
