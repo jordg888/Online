@@ -4,7 +4,6 @@
     function KozakTiv() {
         var _this = this;
 
-        // 1. Ініціалізація: стежимо за відкриттям картки фільму
         this.init = function () {
             Lampa.Listener.follow('full', function (e) {
                 if (e.type === 'complite') {
@@ -13,55 +12,55 @@
             });
         };
 
-        // 2. Рендеринг кнопки (повертаємо її на екран)
         this.render = function (data, html) {
-            $('.lampa-kozak-btn').remove(); // Чистимо старі кнопки
-            
-            var btn = $('<div class="full-start__button selector lampa-kozak-btn" style="background: #ffde1a !important; color: #000 !important; border-radius: 5px; font-weight: bold;"><span>КОЗАК ТВ</span></div>');
+            $('.lampa-kozak-btn').remove();
+            var btn = $('<div class="full-start__button selector lampa-kozak-btn" style="background: #3498db !important; color: #fff !important; border-radius: 5px;"><span>UAFLIX ТВ</span></div>');
             
             btn.on('hover:enter click', function () {
                 _this.search(data.movie);
             });
             
-            // Додаємо кнопку в блок кнопок на сторінці фільму
             $(html).find('.full-start-new__buttons, .full-start__buttons').append(btn);
         };
 
-        // 3. Пошук (через просте спливаюче вікно)
         this.search = function (movie) {
             var title = movie.title || movie.name;
-            Lampa.Noty.show('Шукаємо відео...');
+            Lampa.Noty.show('З’єднання з UAFlix...');
 
-            // Використовуємо Alloha через стабільний проксі, щоб уникнути помилки відтворення
-            var url = 'https://cors.lampac.sh/https://api.alloha.tv/?token=044417740f9350436d7a71888e5d61&name=' + encodeURIComponent(title);
+            // Використовуємо UAFlix через проксі для стабільності
+            var url = 'https://cors.lampac.sh/https://uaflix.tv/api/films?title=' + encodeURIComponent(title);
 
             var network = new Lampa.Reguest();
             network.silent(url, function (res) {
-                if (res && res.data && res.data.iframe) {
-                    var video = res.data.iframe;
-                    if (video.indexOf('//') === 0) video = 'https:' + video;
+                // UAFlix зазвичай повертає масив об'єктів
+                if (res && res.length) {
+                    var items = res.map(function(i) {
+                        return {
+                            title: i.title || title,
+                            subtitle: i.quality || '720p/1080p',
+                            file: i.link || i.iframe || i.file
+                        };
+                    });
 
                     Lampa.Select.show({
-                        title: 'Знайдено на Козак ТВ',
-                        items: [{title: 'Дивитися: ' + title, file: video}],
+                        title: 'Результати UAFlix',
+                        items: items,
                         onSelect: function (item) {
-                            Lampa.Player.play({
-                                url: item.file,
-                                title: title
-                            });
+                            var video = item.file;
+                            if (video.indexOf('//') === 0) video = 'https:' + video;
+                            Lampa.Player.play({ url: video, title: item.title });
                         }
                     });
                 } else {
-                    Lampa.Noty.show('На жаль, відео не знайдено');
+                    Lampa.Noty.show('UAFlix: Фільм не знайдено');
                 }
-            }, function () {
-                Lampa.Noty.show('Помилка сервера. Спробуйте пізніше.');
+            }, function (err) {
+                // Виводимо конкретну помилку в сповіщення
+                console.log('Kozak Error:', err);
+                Lampa.Noty.show('Помилка UAFlix: ' + (err.status || 'Мережа'));
             });
         };
     }
 
-    // Запуск плагіна
-    if (window.Lampa) {
-        new KozakTiv().init();
-    }
+    if (window.Lampa) new KozakTiv().init();
 })();
