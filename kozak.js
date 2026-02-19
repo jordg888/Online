@@ -15,53 +15,57 @@
         this.render = function (data, html) {
             $('.lampa-kozak-btn').remove();
             var btn = $('<div class="full-start__button selector lampa-kozak-btn" style="background: #ffde1a !important; color: #000 !important; border: 2px solid #fff;"><span>КОЗАК ТВ</span></div>');
-            btn.on('hover:enter click', function () { _this.search(data.movie); });
+            btn.on('hover:enter click', function () { _this.open(data.movie); });
             $(html).find('.full-start-new__buttons, .full-start__buttons').append(btn);
         };
 
-        this.search = function (movie) {
-            var title = movie.title || movie.name;
-            var year = (movie.release_date || movie.first_air_date || '').slice(0, 4);
-            
-            Lampa.Noty.show('Пошук відео через Козак ТВ...');
+        this.open = function (movie) {
+            // Замість того, щоб шукати самим, ми відкриваємо стандартне вікно пошуку Lampa
+            // Але з підставленими параметрами від нашого "Козака"
+            Lampa.Component.add('kozak_online', function (object, exam) {
+                var network = new Lampa.Reguest();
+                var scroll = new Lampa.Scroll({mask: true, over: true});
+                var files = new Lampa.Explorer(object);
 
-            // Використовуємо універсальний шлюз Lampac, який зазвичай прописаний у робочих плагінах
-            // Він автоматично знайде і Alloha, і Rezka, і VideoCDN
-            var url = 'https://cors.lampac.sh/https://alloha.tv/api/info?token=044417740f9350436d7a71888e5d61&name=' + encodeURIComponent(title);
+                object.create = function () {
+                    var title = movie.title || movie.name;
+                    // Використовуємо універсальний шлях Lampac, який точно працює в Україні
+                    var url = 'https://cors.lampac.sh/https://alloha.tv/api/info?token=044417740f9350436d7a71888e5d61&name=' + encodeURIComponent(title);
 
-            var network = new Lampa.Reguest();
-            network.silent(url, function (res) {
-                if (res && res.data && res.data.iframe) {
-                    var video_url = res.data.iframe;
-                    if (video_url.indexOf('//') === 0) video_url = 'https:' + video_url;
+                    network.silent(url, function (res) {
+                        if (res && res.data && res.data.iframe) {
+                            var video = res.data.iframe;
+                            if (video.indexOf('//') === 0) video = 'https:' + video;
+                            
+                            // Створюємо елемент списку
+                            var card = Lampa.Template.get('online_item', {
+                                title: 'Дивитися через Козак ТВ',
+                                quality: 'HD'
+                            });
 
-                    // Запускаємо через спеціальний обробчик посилань Lampa
-                    Lampa.Player.play({
-                        url: video_url,
-                        title: title
+                            card.on('hover:enter click', function () {
+                                Lampa.Player.play({ url: video, title: title });
+                            });
+
+                            scroll.append(card);
+                        } else {
+                            scroll.append('<div class="empty">На жаль, за прямим посиланням нічого не знайдено. Спробуйте через розділ "Онлайн" у меню.</div>');
+                        }
+                        object.loading(false);
+                    }, function () {
+                        object.loading(false);
+                        Lampa.Noty.show('Помилка сервера. Спробуйте змінити Парсер у налаштуваннях.');
                     });
-                } else {
-                    // Якщо Alloha мовчить, пробуємо резервний шлях через Voidboost (Rezka)
-                    _this.tryVoidboost(title, year);
-                }
-            }, function () {
-                _this.tryVoidboost(title, year);
+
+                    return scroll.render();
+                };
             });
-        };
 
-        this.tryVoidboost = function (title, year) {
-            // Це посилання на Rezka, яке вже пропущено через проксі для стабільності
-            var url = 'https://cors.lampac.sh/https://voidboost.net/embed/movie?title=' + encodeURIComponent(title) + '&year=' + year;
-            
-            Lampa.Select.show({
-                title: 'Знайдено на Rezka',
-                items: [{title: 'Дивитися у високій якості', file: url}],
-                onSelect: function (item) {
-                    Lampa.Player.play({
-                        url: item.file,
-                        title: title
-                    });
-                }
+            Lampa.Activity.push({
+                title: 'Козак ТВ',
+                component: 'kozak_online',
+                movie: movie,
+                page: 1
             });
         };
     }
