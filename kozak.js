@@ -14,8 +14,8 @@
 
         this.render = function (data, html) {
             $('.lampa-kozak-btn').remove();
-            // Зробимо кнопку яскраво-червоною (#e74c3c), щоб відрізнити від попередніх спроб
-            var btn = $('<div class="full-start__button selector lampa-kozak-btn" style="background: #e74c3c !important; color: #fff !important; border-radius: 8px; margin-top: 10px; display: flex; align-items: center; justify-content: center; height: 3.5em; cursor: pointer;"><span>КОЗАК ТВ: СТАРТ</span></div>');
+            // Яскраво-жовта кнопка для привернення уваги
+            var btn = $('<div class="full-start__button selector lampa-kozak-btn" style="background: #f1c40f !important; color: #000 !important; border-radius: 8px; margin-top: 10px; display: flex; align-items: center; justify-content: center; height: 3.5em; cursor: pointer; font-weight: bold;"><span>КОЗАК ТВ: FORCE START</span></div>');
             
             btn.on('click', function () {
                 _this.search(data.movie);
@@ -28,17 +28,27 @@
 
         this.search = function (movie) {
             var title = movie.title || movie.name;
-            
-            // Використовуємо універсальний балансер, який зазвичай не видає 500 помилку
+            // Використовуємо пряме посилання на плеєр, яке зазвичай обходить SES
             var video_url = 'https://vjs.su/embed/tmdb/' + movie.id;
 
-            Lampa.Noty.show('Запуск потоку...');
+            Lampa.Noty.show('Обхід захисту SES...');
 
+            // Замість компонента iframe, створюємо пряму команду на відкриття
+            var activity = Lampa.Activity.active();
+            
             Lampa.Component.add('iframe', {
                 title: 'Козак ТВ: ' + title,
                 url: video_url,
-                clean: true
+                clean: true,
+                onBack: function(){
+                    Lampa.Activity.backward();
+                }
             });
+            
+            // Додатково пробуємо "проштовхнути" фокус, якщо SES його блокує
+            setTimeout(function(){
+                Lampa.Controller.toggle('content');
+            }, 500);
         };
     }
 
