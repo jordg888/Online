@@ -1,70 +1,85 @@
 (function () {
     'use strict';
 
+    console.log('Kozak:', 'Скрипт запущено, версія 3.1.6');
+
     function KozakTiv() {
         var _this = this;
 
         this.init = function () {
+            console.log('Kozak:', 'Ініціалізація слухача...');
             Lampa.Listener.follow('full', function (e) {
-                if (e.type === 'complite') {
+                console.log('Kozak:', 'Подія full спрацювала:', e.type);
+                if (e.type === 'complite' || e.type === 'ready') {
                     _this.render(e.data, e.object.activity.render());
                 }
             });
         };
 
         this.render = function (data, html) {
+            console.log('Kozak:', 'Малюю кнопку для:', data.movie.title || data.movie.name);
             $('.lampa-kozak-btn').remove();
-            var btn = $('<div class="full-start__button selector lampa-kozak-btn" style="background: #27ae60 !important; color: #fff !important; border-radius: 5px; font-weight: bold;"><span>КОЗАК (SOCKET)</span></div>');
             
-            btn.on('hover:enter click', function () { 
-                console.log('Kozak:', 'Кнопку натиснуто!');
-                _this.search(data.movie); 
+            // Спробуємо додати в різні місця, щоб точно спрацювало
+            var btn = $('<div class="full-start__button selector lampa-kozak-btn" style="background: #27ae60 !important; color: #fff !important; margin-top: 10px; border-radius: 5px; text-align: center; padding: 10px; cursor: pointer;"><span>КОЗАК ТВ (SOCKET)</span></div>');
+            
+            btn.on('click', function () {
+                console.log('Kozak:', 'КНОПКУ НАТИСНУТО!');
+                _this.search(data.movie);
             });
-            
-            $(html).find('.full-start-new__buttons, .full-start__buttons').append(btn);
+
+            var container = $(html).find('.full-start-new__buttons, .full-start__buttons, .full-start__btns');
+            if (container.length > 0) {
+                container.append(btn);
+                console.log('Kozak:', 'Кнопку додано в контейнер');
+            } else {
+                console.log('Kozak:', 'Контейнер для кнопок не знайдено! Пробую додати в кінець сторінки.');
+                $(html).append(btn);
+            }
         };
 
         this.search = function (movie) {
             var title = movie.title || movie.name;
-            var clean_title = title.replace(/[:]/g, '');
-            Lampa.Noty.show('Пошук через Socket...');
-            
-            var url = 'https://api.alloha.tv/?token=044417740f9350436d7a71888e5d61&name=' + encodeURIComponent(clean_title);
-            
-            console.log('Kozak:', 'Відправка запиту через Socket на', url);
+            Lampa.Noty.show('Шукаю через UAFlix...');
 
-            // Використовуємо NativeWsClient, який спілкується з kurwa-bober.ninja
+            // Використовуємо UAFlix через твій робочий сокет
+            var api_url = 'https://uaflix.tv/api/films?title=' + encodeURIComponent(title);
+            console.log('Kozak:', 'Запит до UAFlix через сокет:', api_url);
+
             Lampa.NativeWsClient.send('proxy', {
-                url: url,
+                url: api_url,
                 method: 'GET'
             }, function(res) {
-                console.log('Kozak Socket Відповідь:', res);
-                
-                // Перевіряємо, чи повернув сокет правильну структуру даних
-                if (res && res.data && res.data.iframe) {
-                    var video = res.data.iframe;
-                    if (video.indexOf('//') === 0) video = 'https:' + video;
-                    
+                console.log('Kozak:', 'Відповідь від сокета:', res);
+                if (res && res.length) {
+                    var items = res.map(function(i) {
+                        return {
+                            title: i.title || title,
+                            file: i.link || i.iframe
+                        };
+                    });
+
                     Lampa.Select.show({
-                        title: 'Знайдено на Alloha',
-                        items: [{title: 'Дивитися: ' + title, file: video}],
+                        title: 'UAFlix Результати',
+                        items: items,
                         onSelect: function (item) {
-                            Lampa.Player.play({
-                                url: item.file,
-                                title: title
-                            });
+                            console.log('Kozak:', 'Граю файл:', item.file);
+                            Lampa.Player.play({ url: item.file, title: item.title });
                         }
                     });
                 } else {
-                    Lampa.Noty.show('База не знайдена через Socket');
-                    console.log('Kozak:', 'Неправильний формат даних', res);
+                    Lampa.Noty.show('UAFlix: Нічого не знайдено');
                 }
             }, function(err) {
-                Lampa.Noty.show('Помилка Socket з’єднання');
-                console.log('Kozak Socket Помилка:', err);
+                console.error('Kozak Socket Error:', err);
+                Lampa.Noty.show('Помилка сокета');
             });
         };
     }
 
-    if (window.Lampa) new KozakTiv().init();
+    if (window.Lampa) {
+        new KozakTiv().init();
+    } else {
+        console.error('Kozak:', 'Lampa не знайдена!');
+    }
 })();
