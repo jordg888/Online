@@ -14,7 +14,8 @@
 
         this.render = function (data, html) {
             $('.lampa-kozak-btn').remove();
-            var btn = $('<div class="full-start__button selector lampa-kozak-btn" style="background: #8e44ad !important; color: #fff !important; border-radius: 8px; margin-top: 10px; display: flex; align-items: center; justify-content: center; height: 3.5em; cursor: pointer;"><span>КОЗАК ТВ: COLLAPS</span></div>');
+            // Зробимо кнопку яскраво-червоною (#e74c3c), щоб відрізнити від попередніх спроб
+            var btn = $('<div class="full-start__button selector lampa-kozak-btn" style="background: #e74c3c !important; color: #fff !important; border-radius: 8px; margin-top: 10px; display: flex; align-items: center; justify-content: center; height: 3.5em; cursor: pointer;"><span>КОЗАК ТВ: СТАРТ</span></div>');
             
             btn.on('click', function () {
                 _this.search(data.movie);
@@ -28,10 +29,10 @@
         this.search = function (movie) {
             var title = movie.title || movie.name;
             
-            // Collaps часто працює без VPN і блокувань
-            var video_url = 'https://api.mdb.to/embed/tmdb/' + movie.id;
+            // Використовуємо універсальний балансер, який зазвичай не видає 500 помилку
+            var video_url = 'https://vjs.su/embed/tmdb/' + movie.id;
 
-            Lampa.Noty.show('Запит до Collaps...');
+            Lampa.Noty.show('Запуск потоку...');
 
             Lampa.Component.add('iframe', {
                 title: 'Козак ТВ: ' + title,
