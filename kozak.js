@@ -26,40 +26,34 @@
             items: [
                 {
                     title: 'Енеїда / UA-Kino (VJS)',
-                    subtitle: 'Меню вибору якості та озвучки',
                     id: 'vjs'
                 },
                 {
                     title: 'Ashdi (Тільки UA)',
-                    subtitle: 'Прямий запуск',
                     id: 'ashdi'
                 }
             ],
             onSelect: function (item) {
-                var embedUrl = '';
-                var type = movie.number_of_seasons ? 'tv' : 'movie'; // Перевірка чи це серіал
-                var id = movie.id;
+                var embedUrl = (item.id === 'vjs') 
+                    ? 'https://vjs.su/embed/tmdb/' + movie.id 
+                    : 'https://ashdi.vip/emb/' + movie.id;
 
-                if (item.id === 'vjs') {
-                    embedUrl = 'https://vjs.su/embed/tmdb/' + id;
-                } else {
-                    embedUrl = 'https://ashdi.vip/emb/' + id;
-                }
-
-                console.log('[Kozak] Opening URL:', embedUrl);
-
-                // Закриваємо меню перед відкриттям плеєра
+                // 1. Спочатку закриваємо меню БЕЗ виклику зворотних функцій
                 Lampa.Select.close();
 
-                // Використовуємо Activity.push для гарантованого відкриття
-                Lampa.Activity.push({
-                    url: embedUrl,
-                    title: 'Козак ТВ: ' + (movie.title || movie.name),
+                // 2. Створюємо компонент вручну (це найнадійніший метод)
+                var activity = {
                     component: 'iframe',
+                    title: 'Козак ТВ',
+                    url: embedUrl,
                     page: 1
-                });
+                };
+
+                // 3. Штовхаємо в стек
+                Lampa.Activity.push(activity);
             },
             onBack: function () {
+                // Просто закриваємо без зайвих команд
                 Lampa.Select.close();
             }
         });
