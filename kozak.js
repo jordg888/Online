@@ -14,56 +14,54 @@
 
         this.render = function (data, html) {
             $('.lampa-kozak-btn').remove();
-            var btn = $('<div class="full-start__button selector lampa-kozak-btn" style="background: #e67e22 !important; color: #fff !important; border-radius: 5px;"><span>UAFLIX (ПРЯМИЙ)</span></div>');
-            btn.on('hover:enter click', function () { _this.search(data.movie); });
+            var btn = $('<div class="full-start__button selector lampa-kozak-btn" style="background: #27ae60 !important; color: #fff !important; border-radius: 5px; font-weight: bold;"><span>КОЗАК (SOCKET)</span></div>');
+            
+            btn.on('hover:enter click', function () { 
+                console.log('Kozak:', 'Кнопку натиснуто!');
+                _this.search(data.movie); 
+            });
+            
             $(html).find('.full-start-new__buttons, .full-start__buttons').append(btn);
         };
 
         this.search = function (movie) {
             var title = movie.title || movie.name;
-            Lampa.Noty.show('Спроба прямого підключення...');
+            var clean_title = title.replace(/[:]/g, '');
+            Lampa.Noty.show('Пошук через Socket...');
+            
+            var url = 'https://api.alloha.tv/?token=044417740f9350436d7a71888e5d61&name=' + encodeURIComponent(clean_title);
+            
+            console.log('Kozak:', 'Відправка запиту через Socket на', url);
 
-            // Використовуємо інший безкоштовний проксі-шлюз, який зазвичай не блокують
-            var url = 'https://api.allorigins.win/get?url=' + encodeURIComponent('https://uaflix.tv/api/films?title=' + title);
-
-            $.getJSON(url, function (data) {
-                // allorigins повертає дані в полі contents як рядок
-                var res = JSON.parse(data.contents);
+            // Використовуємо NativeWsClient, який спілкується з kurwa-bober.ninja
+            Lampa.NativeWsClient.send('proxy', {
+                url: url,
+                method: 'GET'
+            }, function(res) {
+                console.log('Kozak Socket Відповідь:', res);
                 
-                if (res && res.length) {
-                    var items = res.map(function(i) {
-                        return {
-                            title: i.title || title,
-                            file: i.link || i.iframe
-                        };
-                    });
-
+                // Перевіряємо, чи повернув сокет правильну структуру даних
+                if (res && res.data && res.data.iframe) {
+                    var video = res.data.iframe;
+                    if (video.indexOf('//') === 0) video = 'https:' + video;
+                    
                     Lampa.Select.show({
-                        title: 'Знайдено на UAFlix',
-                        items: items,
+                        title: 'Знайдено на Alloha',
+                        items: [{title: 'Дивитися: ' + title, file: video}],
                         onSelect: function (item) {
-                            Lampa.Player.play({ url: item.file, title: item.title });
+                            Lampa.Player.play({
+                                url: item.file,
+                                title: title
+                            });
                         }
                     });
                 } else {
-                    Lampa.Noty.show('Фільм не знайдено');
+                    Lampa.Noty.show('База не знайдена через Socket');
+                    console.log('Kozak:', 'Неправильний формат даних', res);
                 }
-            }).fail(function() {
-                Lampa.Noty.show('Прямий доступ заблоковано провайдером');
-                // Остання надія - спробувати через внутрішній сокет, який я бачу у тебе в логах (kurwa-bober.ninja)
-                _this.trySocket(title);
-            });
-        };
-
-        this.trySocket = function(title) {
-            // Використовуємо той самий сокет, який у тебе працює в логах!
-            Lampa.NativeWsClient.send('proxy', {
-                url: 'https://uaflix.tv/api/films?title=' + encodeURIComponent(title),
-                method: 'GET'
-            }, function(res) {
-                if (res && res.length) {
-                    Lampa.Noty.show('Знайдено через Сокет!');
-                }
+            }, function(err) {
+                Lampa.Noty.show('Помилка Socket з’єднання');
+                console.log('Kozak Socket Помилка:', err);
             });
         };
     }
