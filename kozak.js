@@ -21,56 +21,46 @@
 
         this.search = function (movie) {
             var title = movie.title || movie.name;
-            var clean_title = title.replace(/[:]/g, '');
+            var year = (movie.release_date || movie.first_air_date || '').slice(0, 4);
             
-            Lampa.Noty.show('Пошук на Козак ТВ...');
+            Lampa.Noty.show('Пошук відео через Козак ТВ...');
 
-            // Використовуємо Alloha як основне джерело (воно стабільніше для плеєра)
-            var url = 'https://api.alloha.tv/?token=044417740f9350436d7a71888e5d61&name=' + encodeURIComponent(clean_title);
+            // Використовуємо універсальний шлюз Lampac, який зазвичай прописаний у робочих плагінах
+            // Він автоматично знайде і Alloha, і Rezka, і VideoCDN
+            var url = 'https://cors.lampac.sh/https://alloha.tv/api/info?token=044417740f9350436d7a71888e5d61&name=' + encodeURIComponent(title);
 
-            $.ajax({
-                url: url,
-                method: 'GET',
-                dataType: 'json',
-                success: function (res) {
-                    var items = [];
-                    
-                    if (res && res.data && res.data.iframe) {
-                        items.push({
-                            title: 'Дивитися (Канал 1)',
-                            subtitle: 'Якість: Авто',
-                            file: res.data.iframe
-                        });
-                    }
+            var network = new Lampa.Reguest();
+            network.silent(url, function (res) {
+                if (res && res.data && res.data.iframe) {
+                    var video_url = res.data.iframe;
+                    if (video_url.indexOf('//') === 0) video_url = 'https:' + video_url;
 
-                    // Додаємо Rezka як Канал 2 через спеціальний шлюз
-                    items.push({
-                        title: 'Дивитися (Канал 2)',
-                        subtitle: 'Джерело: Rezka',
-                        file: 'https://voidboost.net/embed/movie?title=' + encodeURIComponent(clean_title)
+                    // Запускаємо через спеціальний обробчик посилань Lampa
+                    Lampa.Player.play({
+                        url: video_url,
+                        title: title
                     });
+                } else {
+                    // Якщо Alloha мовчить, пробуємо резервний шлях через Voidboost (Rezka)
+                    _this.tryVoidboost(title, year);
+                }
+            }, function () {
+                _this.tryVoidboost(title, year);
+            });
+        };
 
-                    Lampa.Select.show({
-                        title: 'Оберіть канал для: ' + title,
-                        items: items,
-                        onSelect: function (item) {
-                            var video = item.file;
-                            if (video.indexOf('//') === 0) video = 'https:' + video;
-                            
-                            // Використовуємо Lampa.Player.play з додатковими параметрами
-                            Lampa.Player.play({
-                                url: video,
-                                title: title,
-                                // Додаємо цей блок, щоб плеєр не вибивав помилку
-                                callback: function() {
-                                    Lampa.Controller.toggle('player');
-                                }
-                            });
-                        }
+        this.tryVoidboost = function (title, year) {
+            // Це посилання на Rezka, яке вже пропущено через проксі для стабільності
+            var url = 'https://cors.lampac.sh/https://voidboost.net/embed/movie?title=' + encodeURIComponent(title) + '&year=' + year;
+            
+            Lampa.Select.show({
+                title: 'Знайдено на Rezka',
+                items: [{title: 'Дивитися у високій якості', file: url}],
+                onSelect: function (item) {
+                    Lampa.Player.play({
+                        url: item.file,
+                        title: title
                     });
-                },
-                error: function () {
-                    Lampa.Noty.show('Помилка з’єднання з базою');
                 }
             });
         };
