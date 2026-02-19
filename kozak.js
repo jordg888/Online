@@ -14,36 +14,64 @@
 
         this.render = function (data, html) {
             $('.lampa-kozak-btn').remove();
-            var btn = $('<div class="full-start__button selector lampa-kozak-btn" style="background: #ffde1a !important; color: #000 !important; border: 2px solid #fff;"><span>КОЗАК ТВ</span></div>');
-            btn.on('hover:enter click', function () { _this.search(data.movie); });
+            var btn = $('<div class="full-start__button selector lampa-kozak-btn" style="background: #ffde1a !important; color: #000 !important; border: 1px solid #fff;"><span>КОЗАК ТВ</span></div>');
+            btn.on('hover:enter click', function () { _this.openPage(data.movie); });
             $(html).find('.full-start-new__buttons, .full-start__buttons').append(btn);
         };
 
-        this.search = function (movie) {
+        this.openPage = function (movie) {
             var title = movie.title || movie.name;
-            Lampa.Noty.show('З’єднуємося через резервний шлюз...');
-
-            // Використовуємо пряме посилання на плеєр-балансер (Voidboost/Rezka)
-            // Це джерело найменше блокується в Україні
-            var video_url = 'https://voidboost.net/embed/movie?title=' + encodeURIComponent(title);
             
-            // Замість складних перевірок, ми одразу кажемо Лампі: "Грай це"
-            // Внутрішній плеєр сам спробує "пробити" шлях
-            Lampa.Player.play({
-                url: video_url,
-                title: title
-            });
+            Lampa.Activity.push({
+                title: 'Козак ТВ',
+                component: 'online',
+                movie: movie,
+                page: 1,
+                onRender: function(object) {
+                    // Створюємо логіку пошуку всередині сторінки
+                    object.search = function() {
+                        object.loading(true);
+                        
+                        // Використовуємо шлях, який ви знайшли в робочому плагіні
+                        var url = 'http://golampaua.mooo.com/lite/online?id=' + movie.id + 
+                                  '&title=' + encodeURIComponent(title) + 
+                                  '&year=' + (movie.release_date || '').slice(0,4);
 
-            // Паралельно перевіряємо Alloha через інший проксі, якщо Rezka не піде
-            setTimeout(function() {
-                var alt_url = 'https://api.alloha.tv/?token=044417740f9350436d7a71888e5d61&name=' + encodeURIComponent(title);
-                var network = new Lampa.Reguest();
-                network.silent(alt_url, function(res) {
-                    if (res && res.data && res.data.iframe) {
-                        Lampa.Noty.show('Знайдено додаткове джерело!');
-                    }
-                });
-            }, 2000);
+                        // Використовуємо NativeWsClient (тунель через WebSocket)
+                        // Це дозволяє обійти помилку "Неможливо відтворити посилання"
+                        Lampa.NativeWsClient.send('proxy', {
+                            url: url,
+                            method: 'GET'
+                        }, function(res) {
+                            if (res && res.length) {
+                                var items = res.map(function(i) {
+                                    return {
+                                        title: i.name || i.title || title,
+                                        file: i.url || i.video || i.file,
+                                        quality: i.quality || 'HD',
+                                        info: 'UA/INT'
+                                    };
+                                });
+                                // Малюємо список на сторінці
+                                object.draw(items, {
+                                    onEnter: function(item) {
+                                        Lampa.Player.play({url: item.file, title: item.title});
+                                    }
+                                });
+                            } else {
+                                object.empty(); // Покаже "Тут порожньо", якщо нічого не знайдено
+                            }
+                            object.loading(false);
+                        }, function() {
+                            Lampa.Noty.show('Помилка тунелювання. Перевірте мережу.');
+                            object.loading(false);
+                        });
+                    };
+                    
+                    // Запускаємо пошук після того, як сторінка намальована
+                    object.search();
+                }
+            });
         };
     }
 
