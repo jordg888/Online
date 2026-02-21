@@ -1,54 +1,37 @@
 /**
  * Lampa TV Plugin - Балансери для перегляду фільмів
- * Версія: 2.0.0
+ * Версія: 3.0.0
  */
 
 (function() {
     'use strict';
 
     // Налаштування плагіну
-    const config = {
+    var config = {
         name: 'Custom Balancers',
-        version: '2.0.0',
-        // API ключі для балансерів
+        version: '3.0.0',
         videocdn_token: '3i40G5TSECmLF77oAqnEgbx61ZWaOYE8',
         collaps_token: 'eedefb541aeba4dc661de25b2e0f4b1f'
     };
 
-    // Функція для HTTP запитів
-    function request(url, callback, error) {
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', url, true);
-        xhr.timeout = 10000;
-        xhr.setRequestHeader('Accept', 'application/json');
-        xhr.onreadystatechange = function() {
-            if (xhr.readyState === 4) {
-                if (xhr.status === 200) {
-                    try {
-                        callback(JSON.parse(xhr.responseText));
-                    } catch(e) {
-                        callback(xhr.responseText);
-                    }
-                } else if (error) {
-                    error(xhr.status);
-                }
-            }
-        };
-        xhr.onerror = function() {
-            if (error) error('network');
-        };
-        xhr.send();
+    // Перевіряємо чи завантажилась Lampa
+    function startPlugin() {
+        if (typeof Lampa === 'undefined') {
+            setTimeout(startPlugin, 500);
+            return;
+        }
+        
+        console.log('[Custom Balancers] Starting plugin v' + config.version);
+        initPlugin();
     }
 
     // ===== VIDEOCDN БАЛАНСЕР =====
     function VideoCDNBalaner(card) {
         this.card = card;
-        this.url = null;
     }
 
     VideoCDNBalaner.prototype = {
         search: function(callback) {
-            var _this = this;
             var url = 'https://videocdn.tv/api/short?api_token=' + config.videocdn_token;
             
             if (this.card.imdb_id) {
@@ -60,7 +43,9 @@
                 return;
             }
 
-            request(url, function(data) {
+            var net = new Lampa.Reguest();
+            net.timeout(15000);
+            net.native(url, function(data) {
                 if (data && data.result && data.result.length > 0) {
                     var results = [];
                     data.result.forEach(function(item) {
@@ -103,7 +88,9 @@
                 return;
             }
 
-            request(url, function(data) {
+            var net = new Lampa.Reguest();
+            net.timeout(15000);
+            net.native(url, function(data) {
                 if (data && Array.isArray(data)) {
                     var results = [];
                     data.forEach(function(player) {
@@ -142,7 +129,9 @@
             var url = 'https://api.bhcesh.me/list?token=' + config.collaps_token + 
                       '&title=' + encodeURIComponent(title);
 
-            request(url, function(data) {
+            var net = new Lampa.Reguest();
+            net.timeout(15000);
+            net.native(url, function(data) {
                 if (data && data.results && data.results.length > 0) {
                     var results = [];
                     data.results.forEach(function(item) {
@@ -165,46 +154,33 @@
         }
     };
 
-    // ===== ГОЛОВНИЙ ПЛАГІН =====
+    // ===== ІНІЦІАЛІЗАЦІЯ ПЛАГІНУ =====
     function initPlugin() {
-        console.log('[Custom Balancers] Plugin loaded v' + config.version);
+        // Реєструємо балансери
+        Lampa.Source.add('videocdn', {
+            title: 'VideoCDN',
+            balanser: VideoCDNBalaner
+        });
 
-        // Реєструємо балансери в Lampa
-        if (window.Lampa && Lampa.Balancer) {
-            
-            // VideoCDN
-            Lampa.Balancer.add({
-                name: 'videocdn',
-                title: 'VideoCDN',
-                constructor: VideoCDNBalaner
-            });
+        Lampa.Source.add('kinobox', {
+            title: 'Kinobox',
+            balanser: KinoboxBalaner
+        });
 
-            // Kinobox
-            Lampa.Balancer.add({
-                name: 'kinobox',
-                title: 'Kinobox',
-                constructor: KinoboxBalaner
-            });
+        Lampa.Source.add('collaps', {
+            title: 'Collaps',
+            balanser: CollapsBalaner
+        });
 
-            // Collaps
-            Lampa.Balancer.add({
-                name: 'collaps',
-                title: 'Collaps',
-                constructor: CollapsBalaner
-            });
-
-            console.log('[Custom Balancers] Balancers registered successfully');
-        } else {
-            console.log('[Custom Balancers] Waiting for Lampa...');
-            setTimeout(initPlugin, 1000);
+        console.log('[Custom Balancers] Balancers registered: videocdn, kinobox, collaps');
+        
+        // Показуємо повідомлення про успішне завантаження
+        if (Lampa.Noty) {
+            Lampa.Noty.show('Custom Balancers завантажено!');
         }
     }
 
     // Запускаємо плагін
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initPlugin);
-    } else {
-        initPlugin();
-    }
+    startPlugin();
 
 })();
